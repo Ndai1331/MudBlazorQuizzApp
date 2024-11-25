@@ -1,0 +1,169 @@
+﻿@page "/question/edit/{id}"
+@using QuizAppBlazor.Client.DTOs;
+@using QuizAppBlazor.Client.HttpResonpse
+@using System.Text.Json
+@using System.Text
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject IJSRuntime JsRuntime
+@inherits BaseBlazorPage
+
+<MudGrid>
+    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full">
+        <h2 class="mud-typography mud-typography-h2 docs-title d-inline">SỬA CÂU HỎI&nbsp;</h2>
+        <h2 class="mud-typography mud-typography-h2 mud-primary-text docs-title d-inline">QUIZZ</h2>
+
+    </MudItem>
+    <MudItem xs="12" sm="12" Class="py-2">
+        @if (showQuestionForm == true)
+        {
+            <MudPaper Class="d-flex flex-column pa-2">
+                <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+
+                    <MudGrid>
+                        <MudItem xs="12" sm="12" Class="py-2">
+
+                            <MudTextField T="string" Label="Câu hỏi" @bind-Value="question.Question" Required="true"
+                                RequiredError="Nhập câu hỏi" Typo="Typo.subtitle2" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6" Class="py-2">
+                            <MudTextField Class="py-4" T="string" Label="Đáp án đúng(1)"
+                                @bind-Value="question.CorrectAnswer"  Required="true"
+                                RequiredError="Nhập đáp án đúng!" Typo="Typo.subtitle2" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6" Class="py-2">
+                            <MudTextField Class="py-4" T="string" Label="Đáp án 2" @bind-Value="question.Alternativ2"
+                                Required="false" Typo="Typo.subtitle2" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6" Class="py-2">
+                            <MudTextField Class="py-4" T="string" Label="Đáp án 3" @bind-Value="question.Alternativ3"
+                                Required="false" Typo="Typo.subtitle2" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6" Class="py-2">
+                            <MudTextField Class="py-4" T="string" Label="Đáp án 4" @bind-Value="question.Alternativ4"
+                                Required="false" Typo="Typo.subtitle2" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6" Class="py-2">
+                            <MudTextField Class="py-4" T="int" Label="Thời gian giới hạn (giây)"
+                                @bind-Value="question.TimeLimit" Required="false" Typo="Typo.subtitle2" />
+                        </MudItem>
+
+                        <MudItem xs="12" Class="py-2">
+
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto"
+                                OnClick="@EditQuestion">
+                                <span>Sửa câu hỏi</span>
+                            </MudButton>
+
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" @onclick="NavigateFromPage">Quay lại
+                                danh sách câu
+                                hỏi!</MudButton>
+                        </MudItem>
+                    </MudGrid>
+
+
+                    @if (errors.Length > 0)
+                    {
+                        <MudText Color="@Color.Error">@errors[0]</MudText>
+                    }
+                </MudForm>
+            </MudPaper>
+
+        }
+
+        @if (showQuestionForm != true)
+        {
+            <MudItem xs="12" Class="align-center justify-center mud-width-full">
+                <h4 class="mud-typgraphy mud-typography-h4 docs-title d-inline">Câu hỏi đã được sửa!</h4>
+            </MudItem>
+            <MudItem xs="12" Class="align-center justify-center mud-width-full">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" @onclick="NavigateFromPage">Quay lại
+                    danh sách câu
+                    hỏi!</MudButton>
+            </MudItem>
+        }
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter]
+    public string Id { get; set; }
+    private GetQuestionsDTO question = new GetQuestionsDTO();
+
+    bool success;
+
+    bool isLoading = false;
+    string[] errors = { };
+    MudForm form;
+    private static string? requestStatus;
+    //Question Form
+    private bool showQuestionForm = true;
+    private string? mediaType = "";
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        if (UserLoggedIn != null)
+        {
+            await GetQuestion();
+            StateHasChanged();
+        }
+    }
+
+    private async Task GetQuestion()
+    {
+        bool adminValue = UserLoggedIn.Role == "Admin" ? true : false;
+        if (adminValue)
+        {
+            var response = await
+            Http.GetFromJsonAsync<ResponseBaseHttp<GetQuestionsDTO>>($"api/Quizz/Question/{Id}");
+            question = response?.Result ?? new GetQuestionsDTO();
+        }
+        else
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private async Task EditQuestion()
+    {
+        //add mediaType
+        if (mediaType == "image")
+        {
+            question.IsImage = true;
+        }
+        else if (mediaType == "video")
+        {
+            question.IsVideo = true;
+        }
+        else if (mediaType == "youtube")
+        {
+            question.IsYoutubeVideo = true;
+        }
+
+        var jsonPayLoad = JsonSerializer.Serialize(question);
+        var content = new StringContent(jsonPayLoad, Encoding.UTF8, "application/json");
+        var response = await Http.PutAsync($"api/Quizz/question/{Id}", content);
+        if (response.IsSuccessStatusCode)
+        {
+            var responseContent = await response.Content.ReadFromJsonAsync<ResponseBaseHttp<string>>();
+            if (responseContent != null && responseContent.Result == string.Empty)
+            {
+                await JsRuntime.InvokeVoidAsync("alert", "Cập nhật câu hỏi thành công");
+            }
+            else
+            {
+                await JsRuntime.InvokeVoidAsync("alert", responseContent.Result);
+            }
+        }
+    }
+
+    private void NavigateFromPage()
+    {
+        Navigation.NavigateTo("/questions");
+    }
+}

@@ -1,0 +1,52 @@
+﻿<MudDialog Title="Kết quả chi tiết" MaxWidth="MaxWidth.Large">
+    <DialogContent>
+        <MudSimpleTable Style="overflow-x: auto;">
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th>Câu hỏi</th>
+                    <th>Trả lời</th>
+                    <th>Đáp án đúng</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (int i = 0; i < scoreQuestions.Length; i++)
+                {
+                    <tr>
+                        <td>@(i + 1)</td>
+                        <td>@scoreQuestions[i]</td>
+                        <td>@if (scoreAnswers[i] == scoreCorrects[i])
+                            {
+                                <span class="mud-success-text">@scoreAnswers[i]</span>
+                            }
+                            else
+                            {
+                                <span class="mud-secondary-text">@scoreAnswers[i]</span>
+                            }
+                        </td>
+                        <td>@scoreCorrects[i]</td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Đóng</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public string[] scoreQuestions { get; set; }
+
+    [Parameter]
+    public string[] scoreAnswers { get; set; }
+
+    [Parameter]
+    public string[] scoreCorrects { get; set; }
+
+    private void Cancel() => MudDialog.Cancel();
+}

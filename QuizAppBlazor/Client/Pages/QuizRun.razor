@@ -1,0 +1,298 @@
+﻿@using QuizAppBlazor.Client.DTOs;
+@using System.Text.Json;
+@using System.Text;
+@using System.Timers;
+@inherits BaseBlazorPage
+<style>
+    .button-answer .mud-button-label {
+        color: black !important;
+    }
+</style>
+<MudGrid>
+    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full">
+        <h2 class="mud-typography mud-typography-h2 mud-primary-text docs-title d-inline">BẮT ĐẦU THI</h2>
+    </MudItem>
+
+    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full py-8">
+
+        @if (isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+        }
+        else
+        {
+            <div class="d-flex flex-wrap align-self-center justify-content-center flex-column align-content-center card-body"
+                style=" border-radius: 10px; max-width:500px; background-color:whitesmoke; padding: 1.5rem; margin-bottom: 1rem">
+                @if (questions.Count > 0)
+                {
+                    if (!isRunning)
+                    {
+                        <div style="text-align: center;">
+                            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Tertiary" OnClick="Done">HOÀN THÀNH
+                                BÀI THI!
+                            </MudButton>
+                        </div>
+
+                    }
+                    else
+                    {
+                        <div style="text-align: center;">
+                            <h2 style="margin:1rem;">@questions[qIndex].Question</h2>
+
+                @if (questions[qIndex].HasTimeLimit == true)
+                            {
+                                <p>Câu @(qIndex + 1) / @(questions.Count) || Thời gian còn lại: @Time </p>
+                            }
+                        </div>
+                        @for (int i = 0; i < answerList.Count(); i++)
+                        {
+                            int index = i;
+                            if (!string.IsNullOrEmpty(answerList[i]))
+                            {
+                                <MudButton Class="@(index == selectedIndex ? " mt-4" : "button-answer mt-4")"
+                                    Variant="@(index == selectedIndex ? Variant.Filled : Variant.Outlined)"
+                                    OnClick="() => Answer(qIndex, index)" Color="Color.Info">
+                                    @answerList[index]
+                                </MudButton>
+                            }
+                        }
+
+                        <div class="d-flex align-center justify-end py-1">
+                @if (btnVisible)
+                            {
+                                <MudButton Variant="Variant.Outlined" OnClick="Next" Class="mt-4" Color="Color.Success">
+                                    Tiếp theo
+                                </MudButton>
+                            }
+                        </div>
+
+                    }
+                }
+                else
+                {
+                    <h1 class="title align-self-center flex-wrap">Hiện chưa có câu hỏi nào vui lòng quay lại sau</h1>
+                }
+            </div>
+        }
+
+
+
+    </MudItem>
+</MudGrid>
+
+
+
+@code {
+    private List<GetQuestionsDTO> questions = new List<GetQuestionsDTO>();
+    private int qIndex = 0;
+    private bool isRunning = true;
+    private bool btnVisible = true;
+    private bool isCorrect;
+    private bool isIncorrect;
+    private bool isLoading = true;
+    private int correctAnswers = 0;
+    private UserScoreDTO UserScore = new UserScoreDTO();
+    private System.Timers.Timer _timer = null!;  //Time variable
+    private int _secondsToRun = 0;
+    protected string Time { get; set; } = "00:00";   //Time UI variable and format
+    public bool isTimeOut = false;
+    int selectedIndex = -1;
+
+    //Starts the time
+    public void StartTime(int secondsToRun)
+    {
+        _secondsToRun = secondsToRun;
+        if (_secondsToRun > 0)
+        {
+            Time = TimeSpan.FromSeconds(_secondsToRun).ToString(@"mm\:ss");
+            StateHasChanged();
+            _timer.Start();
+        }
+    }
+
+    //Keeps time runnning
+    public event Action TimerOut;
+    private async void OnTimedEvent(object? sender, ElapsedEventArgs e)
+    {
+        _secondsToRun--;
+        await InvokeAsync(() =>
+        {
+            //CHECK IF TIME HAS RUN OUT
+            if (_secondsToRun <= 0)
+            {
+                isTimeOut = true;
+                TimeOut();
+            }
+            Time = TimeSpan.FromSeconds(_secondsToRun).ToString(@"mm\:ss");
+            StateHasChanged();
+        });
+        if (_secondsToRun <= 0)
+        {
+            _timer.Stop();
+            TimerOut?.Invoke();
+        }
+    }
+
+    public void Dispose()
+    {
+        _timer.Dispose();
+    }
+    private TextInputModel textModel = new TextInputModel();
+    public class TextInputModel
+    {
+        public string Text { get; set; }
+    }
+
+    private List<string> answerList = new List<string>();
+
+    public void Answer(int qIndex, int aIndex)
+    {
+        if (answerList[aIndex] == questions[qIndex].CorrectAnswer)
+        {
+            isCorrect = true;
+            isIncorrect = false;
+            correctAnswers++;
+        }
+        else
+        {
+            isCorrect = false;
+            isIncorrect = true;
+        }
+
+        if (!UserScore.QuestionIndex.Any(x => x == qIndex))
+        {
+            UserScore.QuestionIndex.Add(qIndex);
+            UserScore.Questions.Add(questions[qIndex].Question);
+            UserScore.Corrects.Add(questions[qIndex].CorrectAnswer);
+            UserScore.Answers.Add(answerList[aIndex]);
+        }
+        else
+        {
+            UserScore.Answers[UserScore.QuestionIndex.IndexOf(qIndex)] = answerList[aIndex];
+        }
+
+        selectedIndex = aIndex;
+    }
+
+    public void AnswerByText(string answer)
+    {
+        _timer.Stop();
+        if (String.IsNullOrEmpty(answer))
+        {
+            answer = Guid.NewGuid().ToString();
+        }
+
+        // Trim white space and make small caps
+        if (answer.Trim().ToLower() == questions[qIndex].CorrectAnswer.Trim().ToLower())
+        {
+            isCorrect = true;
+            isIncorrect = false;
+            correctAnswers++;
+        }
+        else
+        {
+            isCorrect = false;
+            isIncorrect = true;
+        }
+    }
+
+
+    //TIMEOUT METHOD HERE, LOOKS LIKE ANSWER METHODS
+    public void TimeOut()
+    {
+        if (!UserScore.QuestionIndex.Any(x => x == qIndex))
+        {
+            UserScore.QuestionIndex.Add(qIndex);
+            UserScore.Questions.Add(questions[qIndex].Question);
+            UserScore.Corrects.Add(questions[qIndex].CorrectAnswer);
+            UserScore.Answers.Add("Không trả lời");
+        }
+
+        Next();
+    }
+
+    public void Next()
+    {
+        selectedIndex = -1;
+        if (qIndex < (questions.Count - 1))
+        {
+            qIndex++;
+            isCorrect = false;
+            isIncorrect = false;
+            isTimeOut = false;
+        }
+        else
+        {
+            isRunning = false;
+            btnVisible = true;
+            QuizFinished();
+        }
+
+        if (questions != null)
+        {
+            answerList.Clear();
+            answerList.Add(questions[qIndex].CorrectAnswer);
+            answerList.Add(questions[qIndex].Alternativ2);
+            answerList.Add(questions[qIndex].Alternativ3);
+            answerList.Add(questions[qIndex].Alternativ4);
+            Shuffle(answerList);
+
+            if (questions[qIndex].HasTimeLimit == true)
+            {
+                StartTime((int)questions[qIndex].TimeLimit);
+            }
+        }
+    }
+
+
+    //Shuffle method
+    private Random rng = new Random();
+    public void Shuffle<T>(List<T> list)
+    {
+        int n = list.Count;
+        while (n > 1)
+        {
+            n--;
+            int k = rng.Next(n + 1);
+            T value = list[k];
+            list[k] = list[n];
+            list[n] = value;
+        }
+    }
+
+    private async Task QuizFinished()
+    {
+        UserScore.CorrectAnswers = correctAnswers;
+        var jsonPayLoad = JsonSerializer.Serialize(UserScore);
+        var content = new StringContent(jsonPayLoad, Encoding.UTF8, "application/json");
+        var response = await Http.PostAsync("api/Quizz/Score/post", content);
+    }
+    private void Done()
+    {
+        Navigation.NavigateTo("/");
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        _timer = new System.Timers.Timer(1000);
+        _timer.Elapsed += OnTimedEvent;
+        _timer.AutoReset = true;
+
+        isLoading = true;
+        questions = await Http.GetFromJsonAsync<List<GetQuestionsDTO>>($"api/Quizz/Question/random");
+        if (questions.Count > 0)
+        {
+            answerList.Clear();
+            answerList.Add(questions[qIndex].CorrectAnswer);
+            answerList.Add(questions[qIndex].Alternativ2);
+            answerList.Add(questions[qIndex].Alternativ3);
+            answerList.Add(questions[qIndex].Alternativ4);
+            Shuffle(answerList);
+            if (questions[qIndex].HasTimeLimit == true)
+            {
+                StartTime((int)questions[qIndex].TimeLimit);
+            }
+        }
+        isLoading = false;
+    }
+}

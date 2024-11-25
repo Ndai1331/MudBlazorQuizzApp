@@ -1,0 +1,97 @@
+﻿@page "/register"
+@using QuizAppBlazor.Client.DTOs
+@using System.ComponentModel.DataAnnotations
+@layout LoginLayout
+@inject IJSRuntime JsRuntime
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<MudGrid>
+    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full">
+        <h2 class="mud-typography mud-typography-h2 docs-title d-inline">ĐĂNG KÝ&nbsp;</h2>
+        <h2 class="mud-typography mud-typography-h2 mud-primary-text docs-title d-inline">QUIZZ</h2>
+    </MudItem>
+    <MudItem xs="12" sm="12" Class="d-flex align-center justify-center py-2">
+        <MudPaper Class="d-flex align-center justify-center pa-2" style="max-width: 400px;">
+            <MudForm style="min-width: 300px;" @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+                <MudTextField T="string" Label="Email" @bind-Value="model.Email" Required="true"
+                    RequiredError="Nhập email" Typo="Typo.subtitle2" />
+
+                <MudTextField T="string" Label="Nickname" @bind-Value="model.Nickname" Required="true"
+                    RequiredError="Nhập nickname" Typo="Typo.subtitle2" />
+                <MudTextField Class="py-4" T="string" Label="Mật khẩu" @bind-Value="model.Password"
+                    InputType="InputType.Password" Required="true" RequiredError="Nhập mật khẩu!"
+                    Typo="Typo.subtitle2" />
+
+                @if (isLoading)
+                {
+                    <div class="d-flex align-center py-1">
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+                    </div>
+                }
+
+                <div class="d-flex align-center py-1">
+                    @if (isLoading)
+                    {
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+                    }
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto"
+                        Disabled="@(errors.Length > 0)" OnClick="@RegisterAsync">
+                        <span>Đăng ký</span>
+                    </MudButton>
+                </div>
+                <div class="d-flex align-center justify-end py-1">
+                    <MudLink href="/login">
+                        <span>Có tài khoản? Đăng nhập</span>
+                    </MudLink>
+                </div>
+
+
+                @if (errors.Length > 0)
+                {
+                    <MudText Color="@Color.Error">@errors[0]</MudText>
+                }
+            </MudForm>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+
+
+@code {
+    private UserLoginDto model = new UserLoginDto();
+    private string errorMessage = string.Empty;
+    bool success;
+    bool isLoading = false;
+    string[] errors = { };
+    MudForm form;
+
+    private void RedirectToLogin()
+    {
+        Navigation.NavigateTo($"/login");
+    }
+
+    private async Task RegisterAsync()
+    {
+        isLoading = true;
+        var response = await Http.PostAsJsonAsync<UserLoginDto>($"api/Quizz/User/register", model);
+        var message = await response.Content.ReadFromJsonAsync<string>();
+        if (response.IsSuccessStatusCode)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                RedirectToLogin();
+            }
+            else
+            {
+                errors = new string[] { message };
+            }
+        }
+        else
+        {
+            errors = new string[] { "Đăng ký thất bại : " + message };
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+}

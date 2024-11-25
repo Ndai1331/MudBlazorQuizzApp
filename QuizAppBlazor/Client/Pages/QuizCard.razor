@@ -1,0 +1,11 @@
+﻿@using QuizAppBlazor.Client.DTOs;
+
+<div class="card-body">
+    <h2 class="card-title">@Quiz?.Title</h2>
+</div>
+
+
+@code {
+    [Parameter]
+    public GetQuizDTO? Quiz { get; set; }
+}

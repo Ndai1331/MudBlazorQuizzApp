@@ -1,0 +1,124 @@
+﻿@page "/users"
+@using QuizAppBlazor.Client.DTOs;
+@using QuizAppBlazor.Client.HttpResonpse
+
+@inherits BaseBlazorPage
+
+<MudGrid>
+    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full">
+        <h2 class="mud-typography mud-typography-h2 docs-title d-inline">Người dùng&nbsp;</h2>
+        <h2 class="mud-typography mud-typography-h2 mud-primary-text docs-title d-inline">QUIZZ</h2>
+    </MudItem>
+
+
+    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full py-4">
+        <MudTextField @bind-Value="_searchString" Placeholder="Tìm kiếm người dùng" @onkeyup="@OnKeyPressAsync"
+            Adornment="Adornment.Start" Immediate="true" AdornmentIcon="@Icons.Material.Filled.Search"
+            IconSize="Size.Medium" Class="mt-0">
+        </MudTextField>
+    </MudItem>
+
+    <MudItem xs="12" Class="mud-width-full py-4">
+        <MudSimpleTable>
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Email</th>
+                    <th>Nickname</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in UserList)
+                {
+                    <tr>
+                        <td>@user.Id</td>
+                        <td>@user.Email</td>
+                        <td>@user.Nickname</td>
+                        <td>
+                            <MudIconButton Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Edit"
+                                Color="Color.Warning" Size="Size.Small" @onclick=" () =>  UpdateUser(user.Id)">
+                            </MudIconButton>
+
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    </MudItem>
+
+    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full py-8">
+        <div class="pagination-controls">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" @onclick="PreviousPage"
+                disabled="@((currentPage == 1))">Trang Trước</MudButton>
+            <span class="py-2">Trang @currentPage / @totalPages</span>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" @onclick="NextPage"
+                disabled="@((currentPage == totalPages))">Trang sau</MudButton>
+        </div>
+    </MudItem>
+</MudGrid>
+
+
+@code {
+    private List<UserAuthDto> UserList = new List<UserAuthDto>();
+    private string _searchString = "";
+    private int currentPage = 1;
+    private int pageSize = 5;
+    private int totalPages = 0;
+    private int skip => (currentPage - 1) * pageSize;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        if (UserLoggedIn != null)
+        {
+            await LoadUsers();
+            StateHasChanged();
+        }
+        else
+        {
+            Navigation.NavigateTo("/login");
+        }
+    }
+
+    private async Task LoadUsers()
+    {
+        bool adminValue = UserLoggedIn.Role == "Admin" ? true : false;
+        var response = await
+        Http.GetFromJsonAsync<ResponseBaseHttp<UserAuthDto[]>>($"api/Quizz/user?search={_searchString}&skip={skip}&take={pageSize}");
+        UserList = response?.Result.ToList() ?? new List<UserAuthDto>();
+        totalPages = response?.TotalPages ?? 0;
+    }
+    private void UpdateUser(Guid id)
+    {
+        Navigation.NavigateTo($"/edit-user/{id}");
+    }
+    private async Task OnKeyPressAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await LoadUsers();
+            StateHasChanged();
+        }
+    }
+    private async Task NextPage()
+    {
+        if (currentPage < totalPages)
+        {
+            currentPage++;
+            await LoadUsers();
+            StateHasChanged();
+        }
+    }
+
+    private async Task PreviousPage()
+    {
+        if (currentPage > 1)
+        {
+            currentPage--;
+            await LoadUsers();
+            StateHasChanged();
+        }
+    }
+}

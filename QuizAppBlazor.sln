@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34031.279
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuizAppBlazor.API", "QuizAppBlazor\API\QuizAppBlazor.API.csproj", "{5BFBFC9A-AFA7-4CAC-ACB9-9C28F2CDAF65}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuizAppBlazor.Client", "QuizAppBlazor\Client\QuizAppBlazor.Client.csproj", "{D55120DD-ABE9-44A7-A9E9-B8F57896A8DF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5BFBFC9A-AFA7-4CAC-ACB9-9C28F2CDAF65}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5BFBFC9A-AFA7-4CAC-ACB9-9C28F2CDAF65}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5BFBFC9A-AFA7-4CAC-ACB9-9C28F2CDAF65}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5BFBFC9A-AFA7-4CAC-ACB9-9C28F2CDAF65}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D55120DD-ABE9-44A7-A9E9-B8F57896A8DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D55120DD-ABE9-44A7-A9E9-B8F57896A8DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D55120DD-ABE9-44A7-A9E9-B8F57896A8DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D55120DD-ABE9-44A7-A9E9-B8F57896A8DF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4CCC1CEC-001E-4256-8574-38B5AACA97E7}
+	EndGlobalSection
+EndGlobal

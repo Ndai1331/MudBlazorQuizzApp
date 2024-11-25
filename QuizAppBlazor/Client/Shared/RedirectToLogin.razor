@@ -1,0 +1,9 @@
+﻿@inject NavigationManager Navigation
+
+@code {
+    protected override void OnInitialized()
+    {
+        Console.WriteLine("Tự động về login");
+        Navigation.NavigateTo("/login");
+    }
+}

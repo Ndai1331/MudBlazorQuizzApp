@@ -1,0 +1,53 @@
+﻿@using QuizAppBlazor.Client.Providers
+@inject NavigationManager Navigation
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
+@inherits BaseBlazorPage
+@inject IJSRuntime JsRuntime
+
+
+<MudNavMenu>
+    <AuthorizeView>
+        <Authorized>
+            <MudNavLink Href="/" Match="NavLinkMatch.Prefix">Thực hiện thi</MudNavLink>
+            @if (UserLoggedIn != null && UserLoggedIn.Role == "Admin")
+            {
+                <MudNavLink Href="/questions" Match="NavLinkMatch.Prefix">Danh sách câu hỏi</MudNavLink>
+                <MudNavLink Href="/report" Match="NavLinkMatch.Prefix">Kết quả thi</MudNavLink>
+                <MudNavLink Href="/users" Match="NavLinkMatch.Prefix">Quản lý người dùng</MudNavLink>
+            }
+            <MudNavLink Href="/user-infomation" Match="NavLinkMatch.Prefix">Thông tin cá nhân</MudNavLink>
+            <MudNavLink OnClick="@(()=> BeginLogOut())">Đăng xuất
+            </MudNavLink>
+
+        </Authorized>
+        <NotAuthorized>
+            <MudNavLink Href="/register" Match="NavLinkMatch.Prefix">Đăng ký</MudNavLink>
+            <MudNavLink Href="/login" Match="NavLinkMatch.Prefix">Đăng nhập</MudNavLink>
+        </NotAuthorized>
+    </AuthorizeView>
+</MudNavMenu>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            StateHasChanged();
+        }
+    }
+
+    protected async Task BeginLogOut()
+    {
+        await JsRuntime.InvokeVoidAsync("localStorage.removeItem", "token");
+        await JsRuntime.InvokeVoidAsync("localStorage.removeItem", "role");
+        await JsRuntime.InvokeVoidAsync("localStorage.removeItem", "id");
+        await JsRuntime.InvokeVoidAsync("localStorage.removeItem", "email");
+        ((CustomAuthenticationStateProvider)AuthenticationStateProvider).MarkUserAsLoggedOut();
+        Navigation.NavigateTo("/login");
+    }
+}

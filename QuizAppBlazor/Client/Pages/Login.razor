@@ -1,0 +1,98 @@
+﻿@page "/login"
+@using QuizAppBlazor.Client.DTOs
+@using QuizAppBlazor.Client.Providers
+@using System.Text.RegularExpressions
+@using System.ComponentModel.DataAnnotations
+@layout LoginLayout
+@inject IJSRuntime JsRuntime
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
+
+
+<MudGrid>
+    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full">
+        <h2 class="mud-typography mud-typography-h2 docs-title d-inline">ĐĂNG NHẬP&nbsp;</h2>
+        <h2 class="mud-typography mud-typography-h2 mud-primary-text docs-title d-inline">QUIZZ</h2>
+
+    </MudItem>
+    <MudItem xs="12" sm="12" Class="d-flex align-center justify-center py-2">
+        <MudPaper Class="d-flex align-center justify-center pa-2" style="max-width: 400px;">
+            <MudForm style="min-width: 300px;" @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+                <MudTextField T="string" Label="Tên đăng nhập hoặc nickname" @bind-Value="model.Email" Required="true"
+                    RequiredError="Nhập tên đăng nhập hoặc nickname" Typo="Typo.subtitle2" />
+                <MudTextField Class="py-4" T="string" Label="Mật khẩu" @bind-Value="model.Password"
+                    InputType="InputType.Password" @onkeyup="@OnKeyPressAsync" Required="true"
+                    RequiredError="Nhập mật khẩu!" Typo="Typo.subtitle2" />
+
+                    @if (isLoading)
+                    {
+                    <div class="d-flex align-center py-1">
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+                    </div>
+                }
+
+
+                <div class="d-flex align-center py-1">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto" OnClick="@LoginAsync">
+                        <span>Đăng nhập</span>
+                    </MudButton>
+                </div>
+                <div class="d-flex align-center justify-end py-1">
+                    <MudLink href="/register">
+                        <span>Chưa có tài khoản? Đăng ký</span>
+                    </MudLink>
+                </div>
+                @if (errors.Length > 0)
+                {
+                    <MudText Color="@Color.Error">@errors[0]</MudText>
+                }
+            </MudForm>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+
+@code {
+    private UserLoginDto model = new UserLoginDto();
+    bool success;
+    bool isLoading = false;
+    string[] errors = { };
+    MudForm form;
+    private void RedirectToQuizzes()
+    {
+        Navigation.NavigateTo($"/");
+    }
+
+    private async Task OnKeyPressAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await LoginAsync();
+        }
+    }
+    private async Task LoginAsync()
+    {
+        isLoading = true;
+        var response = await Http.PostAsJsonAsync<UserLoginDto>($"api/Quizz/user/login", model);
+        if (response.IsSuccessStatusCode)
+        {
+            var user = await response.Content.ReadFromJsonAsync<UserAuthDto>();
+            if (user.Message == "")
+            {
+                await JsRuntime.InvokeVoidAsync("localStorage.setItem", "token", user.BearerToken);
+                await JsRuntime.InvokeVoidAsync("localStorage.setItem", "role", user.Role);
+                await JsRuntime.InvokeVoidAsync("localStorage.setItem", "id", user.Id);
+                await JsRuntime.InvokeVoidAsync("localStorage.setItem", "email", user.Email);
+                ((CustomAuthenticationStateProvider)AuthenticationStateProvider).MarkUserAsAuthenticated(user);
+                RedirectToQuizzes();
+            }
+            else
+            {
+                errors = new string[] { user.Message };
+            }
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+}

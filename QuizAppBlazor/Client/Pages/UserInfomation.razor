@@ -1,0 +1,93 @@
+﻿@page "/user-infomation"
+@using QuizAppBlazor.Client.DTOs
+@using QuizAppBlazor.Client.Providers
+@using System.Text.RegularExpressions
+@using System.ComponentModel.DataAnnotations
+@layout MainLayout
+@inherits BaseBlazorPage
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
+
+<MudGrid>
+    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full">
+        <h2 class="mud-typography mud-typography-h2 docs-title d-inline">THÔNG TIN CÁ NHÂN</h2>
+    </MudItem>
+    <MudItem xs="12" sm="12" Class="d-flex align-center justify-center py-2">
+        <MudPaper Class="d-flex align-center justify-center pa-2" style="max-width: 400px;">
+            <MudForm style="min-width: 300px;" @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+                <MudTextField T="string" Label="Tên đăng nhập" @bind-Value="model.Email" Required="true"
+                    RequiredError="Nhập tên đăng nhập" Typo="Typo.subtitle2" />
+
+                <MudTextField T="string" Label="Nickname" @bind-Value="model.Nickname" Required="true"
+                    RequiredError="Nhập nickname" Typo="Typo.subtitle2" />
+
+                <MudTextField Class="py-4" T="string" Label="Mật khẩu" @bind-Value="model.Password"
+                    InputType="InputType.Password" Typo="Typo.subtitle2" />
+
+                @if (isLoading)
+                {
+                    <div class="d-flex align-center py-1">
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+                    </div>
+                }
+
+                <div class="d-flex align-center py-1">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto" OnClick="@UpdateAsync">
+                        <span>Cập nhật</span>
+                    </MudButton>
+                </div>
+                @if (errors.Length > 0)
+                {
+                    <MudText Color="@Color.Error">@errors[0]</MudText>
+                }
+            </MudForm>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+
+@code {
+    private UserAuthDto model = new UserAuthDto();
+    bool success;
+    bool isLoading = false;
+    string[] errors = { };
+    MudForm form = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        string id = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "id");
+        if (!string.IsNullOrEmpty(id))
+        {
+            var response = await Http.GetFromJsonAsync<UserAuthDto>($"api/Quizz/user/{id}");
+            if (response != null)
+            {
+                model = response;
+            }
+        }
+    }
+
+    private void RedirectToQuizzes()
+    {
+        Navigation.NavigateTo($"/");
+    }
+
+    private async Task UpdateAsync()
+    {
+        isLoading = true;
+        var response = await Http.PostAsJsonAsync<UserAuthDto>($"api/Quizz/user/update", model);
+        if (response.IsSuccessStatusCode)
+        {
+            var message = await response.Content.ReadFromJsonAsync<string>();
+            if (string.IsNullOrEmpty(message))
+            {
+                await _jsRuntime.InvokeVoidAsync("alert", "Cập nhật thành công");
+            }
+            else
+            {
+                errors = new string[] { message };
+            }
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,129 @@
+﻿@page "/questions"
+@using QuizAppBlazor.Client.DTOs;
+@using QuizAppBlazor.Client.HttpResonpse
+@using static MudBlazor.CategoryTypes
+@inject IJSRuntime JsRuntime
+@inherits BaseBlazorPage
+
+
+<MudGrid>
+    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full">
+        <h2 class="mud-typography mud-typography-h2 docs-title d-inline">Danh sách câu hỏi&nbsp;</h2>
+        <h2 class="mud-typography mud-typography-h2 mud-primary-text docs-title d-inline">QUIZZ</h2>
+    </MudItem>
+
+    @if (isLoading)
+    {
+        <MudItem xs="12" Class="align-center justify-center mud-width-full">
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+
+        </MudItem>
+    }
+
+    <MudItem xs="12" Class="align-center justify-center mud-width-full py-8">
+
+        <MudDataGrid Items="@Questions" Filterable="true" QuickFilter="@_quickFilter">
+            <ToolBarContent>
+                <MudTextField @bind-Value="_searchString" Placeholder="Tìm kiếm câu hỏi" Adornment="Adornment.Start"
+                    Immediate="true" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0">
+                </MudTextField>
+                <MudButton Class="ml-4" Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Add"
+                    Color="Color.Primary" @onclick="NavigateToNewQuestion">Thêm mới câu hỏi</MudButton>
+            </ToolBarContent>
+            <Columns>
+                <PropertyColumn Title="Id" Property="x => x.Id" />
+                <PropertyColumn Title="Câu hỏi" Property="x => x.Question" />
+                <PropertyColumn Title="Đáp án đúng (1)" Property="x => x.CorrectAnswer" Filterable="false" />
+                <PropertyColumn Title="Đáp án 2" Property="x => x.Alternativ2" Filterable="false" />
+                <PropertyColumn Title="Đáp án 3" Property="x => x.Alternativ3" Filterable="false" />
+                <PropertyColumn Title="Đáp án 4" Property="x => x.Alternativ4" Filterable="false" />
+                <TemplateColumn>
+                    <CellTemplate>
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Variant="Variant.Outlined"
+                            Color="Color.Primary" Size="Size.Small" @onclick=" () =>  EditQuestion(context.Item.Id)" />
+                    </CellTemplate>
+                </TemplateColumn>
+
+                <TemplateColumn>
+                    <CellTemplate>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Variant="Variant.Outlined"
+                            Color="Color.Error" Size="Size.Small"
+                            @onclick="async () => await DeleteQuestion(context.Item.Id)" />
+
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager T="GetQuestionsDTO" />
+            </PagerContent>
+        </MudDataGrid>
+
+    </MudItem>
+</MudGrid>
+
+
+
+@code {
+    private List<GetQuestionsDTO> Questions = new List<GetQuestionsDTO>();
+    private bool isLoading = true;
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        if (UserLoggedIn != null)
+        {
+            await LoadQuestions();
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    private string _searchString { set; get; } = default!;
+
+    private async Task LoadQuestions()
+    {
+        bool adminValue = UserLoggedIn.Role == "Admin" ? true : false;
+        if (adminValue)
+        {
+            var response = await
+            Http.GetFromJsonAsync<ResponseBaseHttp<GetQuestionsDTO[]>>($"api/Quizz/Question/list?question=&skip=0&take={int.MaxValue}");
+            Questions = response?.Result.ToList() ?? new List<GetQuestionsDTO>();
+        }
+        else
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+    private Func<GetQuestionsDTO, bool> _quickFilter => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        if (x.Question.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
+    };
+    private void EditQuestion(int id)
+    {
+        Navigation.NavigateTo($"/question/edit/{id}");
+    }
+
+    private async Task DeleteQuestion(int id)
+    {
+        var response = await Http.DeleteAsync($"api/Quizz/question/{id}");
+        var responseContent = await response.Content.ReadFromJsonAsync<ResponseBaseHttp<string>>();
+        if (responseContent != null && responseContent.Result == string.Empty)
+        {
+            await LoadQuestions();
+            StateHasChanged();
+        }
+        else
+        {
+            await JsRuntime.InvokeVoidAsync("alert", responseContent?.Result);
+        }
+    }
+
+    private void NavigateToNewQuestion()
+    {
+        Navigation.NavigateTo("/newquestion");
+    }
+}

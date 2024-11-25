@@ -1,0 +1,48 @@
+﻿@page "/"
+@using QuizAppBlazor.Client.DTOs
+@inherits BaseBlazorPage
+
+<MudGrid>
+
+    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full py-8">
+        <h2 class="mud-typography mud-typography-h2 docs-title d-inline">Hệ thống&nbsp;</h2>
+        <h2 class="mud-typography mud-typography-h2 mud-primary-text docs-title d-inline">QUIZZ</h2>
+
+    </MudItem>
+
+
+    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full py-8">
+        <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Send" Color="Color.Primary"
+            @onclick="RedirectToQuiz">Bắt đầu thi</MudButton>
+    </MudItem>
+</MudGrid>
+
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            bool isLoggedIn = await IsAuthenticatedAsync();
+            if (isLoggedIn)
+            {
+                Http = await AttachToken();
+                StateHasChanged();
+            }
+            else
+            {
+                Navigation.NavigateTo("/login");
+            }
+        }
+    }
+    private void RedirectToQuiz()
+    {
+        Navigation.NavigateTo($"/quiz");
+
+    }
+}

@@ -1,0 +1,141 @@
+﻿@page "/newquestion"
+@using QuizAppBlazor.Client.DTOs
+@using System.Text.Json;
+@using System.Text;
+@using System.Net;
+@inject HttpClient _http
+@inject NavigationManager Navigation
+
+
+
+
+<MudGrid>
+    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full">
+        <h2 class="mud-typography mud-typography-h2 docs-title d-inline">TẠO MỚI CÂU HỎI&nbsp;</h2>
+        <h2 class="mud-typography mud-typography-h2 mud-primary-text docs-title d-inline">QUIZZ</h2>
+
+    </MudItem>
+    <MudItem xs="12" sm="12" Class="py-2">
+        @if (showQuestionForm == true)
+        {
+            <MudPaper Class="d-flex flex-column pa-2">
+                <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+                    <MudGrid>
+                        <MudItem xs="12" sm="12" Class="py-2">
+
+                            <MudTextField T="string" Label="Câu hỏi" @bind-Value="question.Question" Required="true"
+                                RequiredError="Nhập câu hỏi" Typo="Typo.subtitle2" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6" Class="py-2">
+                            <MudTextField Class="py-4" T="string" Label="Đáp án đúng(1)"
+                                @bind-Value="question.CorrectAnswer" Required="true" RequiredError="Nhập đáp án đúng!"
+                                Typo="Typo.subtitle2" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6" Class="py-2">
+                            <MudTextField Class="py-4" T="string" Label="Đáp án 2" @bind-Value="question.Alternativ2"
+                                Required="false" Typo="Typo.subtitle2" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6" Class="py-2">
+                            <MudTextField Class="py-4" T="string" Label="Đáp án 3" @bind-Value="question.Alternativ3"
+                                Required="false" Typo="Typo.subtitle2" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6" Class="py-2">
+                            <MudTextField Class="py-4" T="string" Label="Đáp án 4" @bind-Value="question.Alternativ4"
+                                Required="false" Typo="Typo.subtitle2" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6" Class="py-2">
+                            <MudTextField Class="py-4" T="int" Label="Thời gian giới hạn (giây)"
+                                @bind-Value="question.TimeLimit" Required="false" Typo="Typo.subtitle2" />
+                        </MudItem>
+
+                        <MudItem xs="12" Class="py-2">
+
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto"
+                                OnClick="@PostQuestion">
+                                <span>Tạo câu hỏi</span>
+                            </MudButton>
+
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" @onclick="NavigateFromPage">Quay lại
+                                danh sách câu
+                                hỏi!</MudButton>
+                        </MudItem>
+                    </MudGrid>
+
+
+                    @if (errors.Length > 0)
+                    {
+                        <MudText Color="@Color.Error">@errors[0]</MudText>
+                    }
+                </MudForm>
+            </MudPaper>
+
+        }
+
+        @if (showQuestionForm != true)
+        {
+            <MudItem xs="12" Class="align-center justify-center mud-width-full">
+                <h4 class="mud-typgraphy mud-typography-h4 docs-title d-inline">Câu hỏi đã được thêm!</h4>
+            </MudItem>
+            <MudItem xs="12" Class="align-center justify-center mud-width-full">
+
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" @onclick="NewQuestion">Tiếp tục thêm câu hỏi mới
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" @onclick="NavigateFromPage">Quay lại
+                    danh sách câu
+                    hỏi!</MudButton>
+            </MudItem>
+        }
+    </MudItem>
+</MudGrid>
+
+
+@code {
+    bool success;
+    bool isLoading = false;
+    string[] errors = { };
+    MudForm form;
+    private static string? requestStatus;
+    //Question Form
+    private bool showQuestionForm = true;
+    private bool hasTimeLimit = false;
+    private bool hasTextBox = false;
+    private string? mediaType = "";
+    private CreateQuestionDTO question = new CreateQuestionDTO();
+    private async Task PostQuestion()
+    {
+        //add mediaType 
+        if (mediaType == "image")
+        {
+            question.IsImage = true;
+        }
+        else if (mediaType == "video")
+        {
+            question.IsVideo = true;
+        }
+        else if (mediaType == "youtube")
+        {
+            question.IsYoutubeVideo = true;
+        }
+
+        var jsonPayLoad = JsonSerializer.Serialize(question);
+        var content = new StringContent(jsonPayLoad, Encoding.UTF8, "application/json");
+        var response = await _http.PostAsync("api/Quizz/Question/create", content);
+        showQuestionForm = false;
+    }
+
+    private void NewQuestion()
+    {
+        question = new CreateQuestionDTO();
+        showQuestionForm = true;
+    }
+
+    private void NavigateFromPage()
+    {
+        Navigation.NavigateTo("/questions");
+    }
+}

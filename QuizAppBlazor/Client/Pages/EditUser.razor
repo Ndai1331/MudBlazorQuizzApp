@@ -1,0 +1,110 @@
+﻿@page "/edit-user/{id}"
+@using QuizAppBlazor.Client.DTOs
+@using QuizAppBlazor.Client.Providers
+@using System.Text.RegularExpressions
+@using System.ComponentModel.DataAnnotations
+@layout MainLayout
+@inherits BaseBlazorPage
+
+<MudGrid>
+    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full">
+        <h2 class="mud-typography mud-typography-h2 docs-title d-inline">SỬA THÔNG TIN NGƯỜI DÙNG&nbsp;</h2>
+        <h2 class="mud-typography mud-typography-h2 mud-primary-text docs-title d-inline">QUIZZ</h2>
+    </MudItem>
+
+
+    @if (isLoading)
+    {
+        <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full">
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+        </MudItem>
+    }
+
+    <MudItem xs="12" sm="12" Class="d-flex align-center justify-center py-8">
+        <MudPaper Class="d-flex align-center justify-center pa-2" style="min-width: 400px;">
+            <MudForm style="min-width: 300px;" @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+                <MudTextField T="string" Label="Tên đăng nhập" @bind-Value="model.Email" Required="true"
+                    RequiredError="Nhập tên đăng nhập" Typo="Typo.subtitle2" />
+
+                <MudTextField T="string" Label="Nickname" @bind-Value="model.Nickname" Required="true"
+                    RequiredError="Nhập nickname" Typo="Typo.subtitle2" />
+
+                <MudTextField Class="py-4" T="string" Label="Mật khẩu" @bind-Value="model.Password"
+                    InputType="InputType.Password" Typo="Typo.subtitle2" />
+
+                <div class="d-flex align-center py-1">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto" OnClick="@UpdateAsync">
+                        <span>Cập nhật</span>
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto"
+                        OnClick="@(() => Navigation.NavigateTo($"/users"))">
+                        <span>Quay lại</span>
+                    </MudButton>
+                </div>
+                @if (errors.Length > 0)
+                {
+                    <MudText Color="@Color.Error">@errors[0]</MudText>
+                }
+            </MudForm>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+
+@code {
+    private UserAuthDto model = new UserAuthDto();
+    bool success;
+    bool isLoading = true;
+    string[] errors = { };
+    MudForm form = default!;
+    [Parameter]
+    public string Id { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        if (UserLoggedIn != null && UserLoggedIn.Role == "Admin")
+        {
+            if (!string.IsNullOrEmpty(Id))
+            {
+                var response = await Http.GetFromJsonAsync<UserAuthDto>($"api/Quizz/user/{Id}");
+                if (response != null)
+                {
+                    model = response;
+                }
+            }
+
+            isLoading = false;
+            StateHasChanged();
+        }
+        else
+        {
+            Navigation.NavigateTo($"/login");
+        }
+    }
+
+    private async Task UpdateAsync()
+    {
+        isLoading = true;
+        var response = await Http.PostAsJsonAsync<UserAuthDto>($"api/Quizz/user/update", model);
+        if (response.IsSuccessStatusCode)
+        {
+            var message = await response.Content.ReadFromJsonAsync<string>();
+            if (string.IsNullOrEmpty(message))
+            {
+                await _jsRuntime.InvokeVoidAsync("alert", "Cập nhật thành công");
+                Navigation.NavigateTo($"/users");
+            }
+            else
+            {
+                errors = new string[] { message };
+            }
+        }
+        else
+        {
+            var error = await response.Content.ReadFromJsonAsync<string>();
+            errors = new string[] { error };
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+}

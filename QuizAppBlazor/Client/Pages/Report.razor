@@ -1,0 +1,156 @@
+﻿@page "/report"
+@using QuizAppBlazor.Client.DTOs;
+@using QuizAppBlazor.Client.HttpResonpse
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject IJSRuntime JsRuntime
+@inject IDialogService DialogService
+
+@inherits BaseBlazorPage
+
+<MudGrid>
+    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full">
+        <h2 class="mud-typography mud-typography-h2 docs-title d-inline">Kết quả&nbsp;</h2>
+        <h2 class="mud-typography mud-typography-h2 mud-primary-text docs-title d-inline">QUIZZ</h2>
+    </MudItem>
+
+
+    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full py-4">
+        <MudTextField @bind-Value="_searchString" Placeholder="Tìm kiếm người thi" @onkeyup="@OnKeyPressAsync"
+            Adornment="Adornment.Start" Immediate="true" AdornmentIcon="@Icons.Material.Filled.Search"
+            IconSize="Size.Medium" Class="mt-0">
+        </MudTextField>
+    </MudItem>
+
+    <MudItem xs="12" Class="mud-width-full py-4">
+        <MudSimpleTable>
+            <thead>
+                <tr>
+                    <th>Người thi</th>
+                    <th>Kết quả</th>
+                    <th>Thời gian</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var score in Scores)
+                {
+                    <tr>
+                        <td>@score.Nickname</td>
+                        <td>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Info" Size="Size.Small"
+                                @onclick=" () =>  OpenModal(score.Questions, score.Answers, score.Corrects)">
+                                @score.Points
+                            </MudButton>
+
+                        </td>
+                        <td>@score.Date</td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    </MudItem>
+
+    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full py-8">
+        <div class="pagination-controls">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" @onclick="PreviousPage"
+                disabled="@((currentPage == 1))">Trang Trước</MudButton>
+            <span class="py-2">Trang @currentPage / @totalPages</span>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" @onclick="NextPage"
+                disabled="@((currentPage == totalPages))">Trang sau</MudButton>
+        </div>
+    </MudItem>
+</MudGrid>
+
+
+@code {
+    private List<GetScoreByAuthorDTO> Scores = new List<GetScoreByAuthorDTO>();
+    public string ModalDisplay = "none;";
+    private string _searchString = "";
+    private int currentPage = 1;
+    private int pageSize = 5; // Số lượng bản ghi trên mỗi trang
+    private int totalPages = 0;
+    private int skip => (currentPage - 1) * pageSize;
+
+    private string[] scoreQuestions = new string[] { };
+    private string[] scoreAnswers = new string[] { };
+    private string[] scoreCorrects = new string[] { };
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        if (UserLoggedIn != null)
+        {
+            await LoadScores();
+            StateHasChanged();
+        }
+        else
+        {
+            Navigation.NavigateTo("/login");
+        }
+    }
+
+    private async Task LoadScores()
+    {
+        bool adminValue = UserLoggedIn.Role == "Admin" ? true : false;
+        var response = await
+        Http.GetFromJsonAsync<ResponseBaseHttp<GetScoreByAuthorDTO[]>>($"api/Quizz/Score?userNickname={_searchString}&skip={skip}&take={pageSize}&isAdmin={adminValue}");
+        Scores = response?.Result.ToList() ?? new List<GetScoreByAuthorDTO>();
+        totalPages = response?.TotalPages ?? 0;
+    }
+
+    private async Task OnKeyPressAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await LoadScores();
+            StateHasChanged();
+        }
+    }
+    private async Task NextPage()
+    {
+        if (currentPage < totalPages)
+        {
+            currentPage++;
+            await LoadScores();
+            StateHasChanged();
+        }
+    }
+
+    private async Task PreviousPage()
+    {
+        if (currentPage > 1)
+        {
+            currentPage--;
+            await LoadScores();
+            StateHasChanged();
+        }
+    }
+
+    private Func<GetScoreByAuthorDTO, bool> _quickFilter => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        if (x.Nickname.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
+    };
+
+    public Task OpenModal(string questions, string answers, string corrects)
+    {
+        scoreQuestions = new string[] { };
+        scoreAnswers = new string[] { };
+        scoreCorrects = new string[] { };
+        scoreQuestions = questions.Split('|');
+        scoreAnswers = answers.Split('|');
+        scoreCorrects = corrects.Split('|');
+
+        return DialogService.ShowAsync<DialogReport>("Kết quả chi tiết", new DialogParameters<DialogReport>
+{
+{ x => x.scoreQuestions, scoreQuestions },
+{ x => x.scoreAnswers, scoreAnswers },
+{ x => x.scoreCorrects, scoreCorrects }
+});
+    }
+}
