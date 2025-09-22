@@ -1,4 +1,4 @@
-﻿namespace QuizAppBlazor.API.HttpResonpse
+namespace QuizAppBlazor.Client.HttpResponse
 {
     public class ResponseBaseHttp<T>
     {

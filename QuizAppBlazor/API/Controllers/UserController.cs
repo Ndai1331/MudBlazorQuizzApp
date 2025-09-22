@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using QuizAppBlazor.API.Data;
 using QuizAppBlazor.API.DTOs;
 using QuizAppBlazor.API.Helpers;
-using QuizAppBlazor.API.HttpResonpse;
+using QuizAppBlazor.API.HttpResponse;
 using QuizAppBlazor.API.Models;
 
 namespace QuizAppBlazor.API.Controllers

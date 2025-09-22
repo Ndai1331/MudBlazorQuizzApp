@@ -1,0 +1,215 @@
+@page "/questions/create-v2"
+@using QuizAppBlazor.Client.DTOs
+@using QuizAppBlazor.Client.Services
+@using System.ComponentModel.DataAnnotations
+@inherits BaseBlazorPage
+
+<PageTitle>Tạo câu hỏi mới</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudCard>
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6">Tạo câu hỏi mới</MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            <EditForm Model="@model" OnValidSubmit="@HandleValidSubmit">
+                <DataAnnotationsValidator />
+                
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="model.Question" 
+                                      Label="Câu hỏi" 
+                                      Variant="Variant.Outlined"
+                                      Lines="3"
+                                      Counter="500"
+                                      MaxLength="500"
+                                      For="@(() => model.Question)"
+                                      HelperText="Nhập nội dung câu hỏi (10-500 ký tự)" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudSwitch @bind-Value="model.IsTextInput" 
+                                   Label="Câu hỏi tự luận" 
+                                   Color="Color.Primary" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudSwitch @bind-Value="model.HasTimeLimit" 
+                                   Label="Có giới hạn thời gian" 
+                                   Color="Color.Primary" />
+                    </MudItem>
+
+                    @if (model.HasTimeLimit)
+                    {
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField @bind-Value="model.TimeLimit" 
+                                             Label="Thời gian (giây)" 
+                                             Variant="Variant.Outlined"
+                                             Min="10" 
+                                             Max="300"
+                                             For="@(() => model.TimeLimit)"
+                                             HelperText="10-300 giây" />
+                        </MudItem>
+                    }
+
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="model.CorrectAnswer" 
+                                      Label="Đáp án đúng" 
+                                      Variant="Variant.Outlined"
+                                      MaxLength="200"
+                                      For="@(() => model.CorrectAnswer)"
+                                      HelperText="Nhập đáp án đúng (1-200 ký tự)" />
+                    </MudItem>
+
+                    @if (!model.IsTextInput)
+                    {
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2">Các lựa chọn khác (ít nhất 1 lựa chọn)</MudText>
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="model.Alternativ2" 
+                                          Label="Lựa chọn 2" 
+                                          Variant="Variant.Outlined"
+                                          MaxLength="200"
+                                          For="@(() => model.Alternativ2)" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="model.Alternativ3" 
+                                          Label="Lựa chọn 3" 
+                                          Variant="Variant.Outlined"
+                                          MaxLength="200"
+                                          For="@(() => model.Alternativ3)" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="model.Alternativ4" 
+                                          Label="Lựa chọn 4" 
+                                          Variant="Variant.Outlined"
+                                          MaxLength="200"
+                                          For="@(() => model.Alternativ4)" />
+                        </MudItem>
+                    }
+
+                    <MudItem xs="12">
+                        <MudExpansionPanels>
+                            <MudExpansionPanel Text="Media (Tùy chọn)">
+                                <MudTextField @bind-Value="model.ImageVideo" 
+                                              Label="URL Media" 
+                                              Variant="Variant.Outlined"
+                                              MaxLength="500"
+                                              For="@(() => model.ImageVideo)"
+                                              HelperText="URL hình ảnh, video hoặc YouTube" />
+                                
+                                <MudGrid Class="mt-2">
+                                    <MudItem xs="4">
+                                        <MudSwitch @bind-Value="model.IsImage" 
+                                                   Label="Hình ảnh" 
+                                                   Color="Color.Primary" />
+                                    </MudItem>
+                                    <MudItem xs="4">
+                                        <MudSwitch @bind-Value="model.IsVideo" 
+                                                   Label="Video" 
+                                                   Color="Color.Primary" />
+                                    </MudItem>
+                                    <MudItem xs="4">
+                                        <MudSwitch @bind-Value="model.IsYoutubeVideo" 
+                                                   Label="YouTube" 
+                                                   Color="Color.Primary" />
+                                    </MudItem>
+                                </MudGrid>
+                            </MudExpansionPanel>
+                        </MudExpansionPanels>
+                    </MudItem>
+                </MudGrid>
+
+                <ValidationSummary />
+
+            </EditForm>
+        </MudCardContent>
+        <MudCardActions>
+            <MudButton Variant="Variant.Text" 
+                       OnClick="@NavigateBack">
+                Hủy
+            </MudButton>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       OnClick="@HandleValidSubmit"
+                       Disabled="@isSubmitting">
+                @if (isSubmitting)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+                    <MudText Class="ms-2">Đang tạo...</MudText>
+                }
+                else
+                {
+                    <MudText>Tạo câu hỏi</MudText>
+                }
+            </MudButton>
+        </MudCardActions>
+    </MudCard>
+</MudContainer>
+
+@code {
+    private CreateQuestionDTO model = new CreateQuestionDTO();
+    private bool isSubmitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        
+        bool isLoggedIn = await IsAuthenticatedAsync();
+        if (!isLoggedIn)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        
+        Http = await AttachToken();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (isSubmitting) return;
+
+        // Custom validation
+        if (!model.IsValid())
+        {
+            Snackbar.Add("Câu hỏi trắc nghiệm phải có ít nhất một lựa chọn thay thế", Severity.Warning);
+            return;
+        }
+
+        isSubmitting = true;
+        
+        try
+        {
+            var result = await ApiService.CreateQuestionAsync(model);
+            
+            if (string.IsNullOrEmpty(result.Result))
+            {
+                Snackbar.Add("Tạo câu hỏi thành công!", Severity.Success);
+                Navigation.NavigateTo("/questions");
+            }
+            else
+            {
+                Snackbar.Add($"Lỗi: {result.Result}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi kết nối: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo("/questions-v2");
+    }
+}

@@ -23,10 +23,14 @@
 
   <ItemGroup>
     <None Remove="DTOs\" />
-    <None Remove="HttpResonpse\" />
+    <None Remove="HttpResponse\" />
+    <None Remove="Services\" />
+    <None Remove="Components\" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DTOs\" />
-    <Folder Include="HttpResonpse\" />
+    <Folder Include="HttpResponse\" />
+    <Folder Include="Services\" />
+    <Folder Include="Components\" />
   </ItemGroup>
 </Project>

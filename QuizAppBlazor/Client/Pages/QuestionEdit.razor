@@ -1,6 +1,6 @@
 ﻿@page "/question/edit/{id}"
 @using QuizAppBlazor.Client.DTOs;
-@using QuizAppBlazor.Client.HttpResonpse
+@using QuizAppBlazor.Client.HttpResponse
 @using System.Text.Json
 @using System.Text
 @inject HttpClient Http
@@ -11,7 +11,7 @@
 <MudGrid>
     <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full">
         <h2 class="mud-typography mud-typography-h2 docs-title d-inline">SỬA CÂU HỎI&nbsp;</h2>
-        <h2 class="mud-typography mud-typography-h2 mud-primary-text docs-title d-inline">QUIZZ</h2>
+        <h2 class="mud-typography mud-typography-h2 mud-primary-text docs-title d-inline">Hệ thống</h2>
 
     </MudItem>
     <MudItem xs="12" sm="12" Class="py-2">
@@ -49,7 +49,7 @@
                         </MudItem>
 
                         <MudItem xs="12" md="6" Class="py-2">
-                            <MudTextField Class="py-4" T="int" Label="Thời gian giới hạn (giây)"
+                            <MudTextField Class="py-4" T="int?" Label="Thời gian giới hạn (giây)"
                                 @bind-Value="question.TimeLimit" Required="false" Typo="Typo.subtitle2" />
                         </MudItem>
 

@@ -1,8 +1,8 @@
 ﻿@page "/questions"
 @using QuizAppBlazor.Client.DTOs;
-@using QuizAppBlazor.Client.HttpResonpse
+@using QuizAppBlazor.Client.HttpResponse
+@using QuizAppBlazor.Client.Services
 @using static MudBlazor.CategoryTypes
-@inject IJSRuntime JsRuntime
 @inherits BaseBlazorPage
 
 
@@ -118,7 +118,7 @@
         }
         else
         {
-            await JsRuntime.InvokeVoidAsync("alert", responseContent?.Result);
+            await _jsRuntime.InvokeVoidAsync("alert", responseContent?.Result);
         }
     }
 

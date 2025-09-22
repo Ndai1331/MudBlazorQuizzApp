@@ -2,28 +2,153 @@
 @using QuizAppBlazor.Client.DTOs
 @inherits BaseBlazorPage
 
-<MudGrid>
+<PageTitle>Quiz App - Trang chủ</PageTitle>
 
-    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full py-8">
-        <h2 class="mud-typography mud-typography-h2 docs-title d-inline">Hệ thống&nbsp;</h2>
-        <h2 class="mud-typography mud-typography-h2 mud-primary-text docs-title d-inline">QUIZZ</h2>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudStack Spacing="6" AlignItems="AlignItems.Center">
+        <!-- Welcome Header -->
+        <MudPaper Class="pa-8 text-center" Elevation="4" Style="background: linear-gradient(45deg, #1976d2 30%, #42a5f5 90%);">
+            <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.Quiz" Size="Size.Large" Style="color: white; font-size: 4rem;" />
+                <MudText Typo="Typo.h2" Style="color: white; font-weight: bold;">
+                    Hệ thống thi BẢO MẬT
+                </MudText>
+                <MudText Typo="Typo.h6" Style="color: rgba(255,255,255,0.8);">
+                    Kiểm tra kiến thức của bạn với các câu hỏi bảo mật
+                </MudText>
+            </MudStack>
+        </MudPaper>
 
-    </MudItem>
+        <!-- User Info Card -->
+        @if (UserLoggedIn != null)
+        {
+            <MudCard Style="min-width: 400px;">
+                <MudCardContent>
+                    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                            <MudAvatar Color="Color.Primary" Size="Size.Medium">
+                                <MudIcon Icon="@Icons.Material.Filled.Person" />
+                            </MudAvatar>
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.subtitle1">Xin chào, @UserLoggedIn.Nickname!</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@UserLoggedIn.Email</MudText>
+                            </MudStack>
+                        </MudStack>
+                        <MudChip T="string" Color="Color.Primary" Text="@UserLoggedIn.Role" Size="Size.Small" />
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        }
 
+        <!-- Quick Stats -->
+        <MudGrid Justify="Justify.Center">
+            <MudItem xs="12" sm="4">
+                <MudCard Elevation="2">
+                    <MudCardContent Class="text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.Quiz" Color="Color.Primary" Size="Size.Large" />
+                        <MudText Typo="Typo.h6">@totalQuestions</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Tổng câu hỏi</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudCard Elevation="2">
+                    <MudCardContent Class="text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.History" Color="Color.Success" Size="Size.Large" />
+                        <MudText Typo="Typo.h6">@completedQuizzes</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Bài thi đã làm</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudCard Elevation="2">
+                    <MudCardContent Class="text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Warning" Size="Size.Large" />
+                        <MudText Typo="Typo.h6">@(averageScore.ToString("F1"))%</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Điểm trung bình</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
 
-    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full py-8">
-        <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Send" Color="Color.Primary"
-            @onclick="RedirectToQuiz">Bắt đầu thi</MudButton>
-    </MudItem>
-</MudGrid>
+        <!-- Main Actions -->
+        <MudStack Row Spacing="4" Justify="Justify.Center">
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       Size="Size.Large"
+                       StartIcon="@Icons.Material.Filled.PlayArrow"
+                       OnClick="@StartQuiz"
+                       Class="pa-4">
+                <MudStack AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.h6">Bắt đầu thi</MudText>
+                    <MudText Typo="Typo.body2">15 câu hỏi ngẫu nhiên</MudText>
+                </MudStack>
+            </MudButton>
+            
+            <MudButton Variant="Variant.Outlined" 
+                       Color="Color.Primary" 
+                       Size="Size.Large"
+                       StartIcon="@Icons.Material.Filled.History"
+                       OnClick="@ViewHistory"
+                       Class="pa-4">
+                <MudStack AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.h6">Lịch sử</MudText>
+                    <MudText Typo="Typo.body2">Xem kết quả cũ</MudText>
+                </MudStack>
+            </MudButton>
+        </MudStack>
+
+        <!-- Recent Activity -->
+        @if (recentScores?.Any() == true)
+        {
+            <MudCard Style="width: 100%; max-width: 800px;">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">
+                            <MudIcon Icon="@Icons.Material.Filled.History" Class="mr-2" />
+                            Hoạt động gần đây
+                        </MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudList T="string">
+                        @foreach (var score in recentScores.Take(5))
+                        {
+                            <MudListItem T="string">
+                                <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                    <MudStack>
+                                        <MudText Typo="Typo.body1">
+                                            Bài thi ngày @score.Date?.ToString("dd/MM/yyyy") lúc @score.Date?.ToString("HH:mm")
+                                        </MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                            @score.Points/@(score.Questions?.Split('|').Length ?? 0) câu đúng
+                                        </MudText>
+                                    </MudStack>
+                                    <MudChip T="string" Color="@GetScoreColor(score.Points, score.Questions?.Split('|').Length ?? 0)" 
+                                             Text="@GetScorePercentage(score.Points, score.Questions?.Split('|').Length ?? 0)" />
+                                </MudStack>
+                            </MudListItem>
+                            <MudDivider />
+                        }
+                    </MudList>
+                </MudCardContent>
+            </MudCard>
+        }
+    </MudStack>
+</MudContainer>
 
 
 @code {
+    private int totalQuestions = 0;
+    private int completedQuizzes = 0;
+    private double averageScore = 0;
+    private IEnumerable<GetScoreByAuthorDTO> recentScores = new List<GetScoreByAuthorDTO>();
+
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-
     }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -32,6 +157,7 @@
             if (isLoggedIn)
             {
                 Http = await AttachToken();
+                await LoadDashboardData();
                 StateHasChanged();
             }
             else
@@ -40,9 +166,78 @@
             }
         }
     }
-    private void RedirectToQuiz()
-    {
-        Navigation.NavigateTo($"/quiz");
 
+    private async Task LoadDashboardData()
+    {
+        try
+        {
+            // Load total questions count
+            var questionsResult = await ApiService.GetQuestionsAsync("", 0, 1);
+            totalQuestions = questionsResult.TotalRecords;
+
+            // Load user's recent scores
+            var scoresResult = await ApiService.GetScoresAsync("", 0, 10);
+            recentScores = scoresResult.Result ?? new List<GetScoreByAuthorDTO>();
+            
+            completedQuizzes = recentScores.Count();
+            
+            // Calculate average score
+            if (recentScores.Any())
+            {
+                var totalScore = recentScores.Sum(s => 
+                {
+                    var totalQuestions = s.Questions?.Split('|').Length ?? 1;
+                    return (double)s.Points / totalQuestions * 100;
+                });
+                averageScore = totalScore / recentScores.Count();
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync($"Lỗi tải dữ liệu: {ex.Message}");
+        }
+    }
+
+    private async Task StartQuiz()
+    {
+        try
+        {
+            // Check if there are questions available
+            if (totalQuestions < 15)
+            {
+                await ShowWarningAsync($"Cần có ít nhất 15 câu hỏi để bắt đầu thi. Hiện tại chỉ có {totalQuestions} câu hỏi.");
+                return;
+            }
+
+            Navigation.NavigateTo("/quiz");
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync($"Lỗi: {ex.Message}");
+        }
+    }
+
+    private void ViewHistory()
+    {
+        Navigation.NavigateTo("/quiz-history");
+    }
+
+    private Color GetScoreColor(int correctAnswers, int totalQuestions)
+    {
+        if (totalQuestions == 0) return Color.Default;
+        
+        var percentage = (double)correctAnswers / totalQuestions * 100;
+        
+        if (percentage >= 80) return Color.Success;
+        if (percentage >= 60) return Color.Warning;
+        return Color.Error;
+    }
+
+    private string GetScorePercentage(int correctAnswers, int totalQuestions)
+    {
+        if (totalQuestions == 0) return "0%";
+        
+        var percentage = (double)correctAnswers / totalQuestions * 100;
+        return $"{percentage:F1}%";
     }
 }

@@ -3,7 +3,9 @@ using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
+using MudBlazor;
 using QuizAppBlazor.Client.DTOs;
+using QuizAppBlazor.Client.Services;
 
 namespace QuizAppBlazor.Client.Shared
 {
@@ -13,6 +15,7 @@ namespace QuizAppBlazor.Client.Shared
 
         [CascadingParameter]
         public Task<AuthenticationState> AuthState { get; set; }
+
         [Inject]
         public IJSRuntime _jsRuntime { get; set; }
 
@@ -24,6 +27,17 @@ namespace QuizAppBlazor.Client.Shared
 
         [Inject]
         public HttpClient Http { get; set; }
+
+        [Inject]
+        public IApiService ApiService { get; set; }
+
+        [Inject]
+        public ISnackbar Snackbar { get; set; }
+
+        [Inject]
+        public IDialogService DialogService { get; set; }
+
+        protected bool IsLoading { get; set; } = false;
 
         protected override async Task OnInitializedAsync()
         {
@@ -85,12 +99,43 @@ namespace QuizAppBlazor.Client.Shared
 
         public async Task LogoutAsync()
         {
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "token");
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "role");
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "email");
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "id");
+            await _localStorageService.RemoveItemAsync("token");
+            await _localStorageService.RemoveItemAsync("role");
+            await _localStorageService.RemoveItemAsync("email");
+            await _localStorageService.RemoveItemAsync("id");
+            await _localStorageService.RemoveItemAsync("nickname");
+            
             UserLoggedIn = null;
-            Navigation.NavigateTo($"/login");
+            Http.DefaultRequestHeaders.Authorization = null;
+            
+            Snackbar.Add("Đã đăng xuất thành công", Severity.Info);
+            Navigation.NavigateTo("/login", true);
+        }
+
+        protected async Task ShowErrorAsync(string message)
+        {
+            Snackbar.Add(message, Severity.Error);
+        }
+
+        protected async Task ShowSuccessAsync(string message)
+        {
+            Snackbar.Add(message, Severity.Success);
+        }
+
+        protected async Task ShowInfoAsync(string message)
+        {
+            Snackbar.Add(message, Severity.Info);
+        }
+
+        protected async Task ShowWarningAsync(string message)
+        {
+            Snackbar.Add(message, Severity.Warning);
+        }
+
+        protected async Task<bool> ConfirmAsync(string title, string message)
+        {
+            // Simple confirmation using JavaScript for now
+            return await _jsRuntime.InvokeAsync<bool>("confirm", $"{title}\n\n{message}");
         }
     }
 }

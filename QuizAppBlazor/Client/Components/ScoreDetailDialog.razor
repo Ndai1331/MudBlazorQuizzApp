@@ -1,0 +1,195 @@
+@using QuizAppBlazor.Client.DTOs
+
+<MudDialog>
+    <DialogContent>
+        @if (Score != null)
+        {
+            <MudStack Spacing="4">
+                <!-- Header Info -->
+                <MudCard>
+                    <MudCardContent>
+                        <MudGrid>
+                            <MudItem xs="12" md="6">
+                                <MudStack>
+                                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Ngày thi</MudText>
+                                    <MudText Typo="Typo.h6">@Score.Date?.ToString("dd/MM/yyyy HH:mm")</MudText>
+                                </MudStack>
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudStack>
+                                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Kết quả</MudText>
+                                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudText Typo="Typo.h6">@Score.Points/@totalQuestions</MudText>
+                                        <MudChip T="string" Color="@GetScoreColor()" Text="@($"{GetScorePercentage():F1}%")" />
+                                    </MudStack>
+                                </MudStack>
+                            </MudItem>
+                        </MudGrid>
+                        
+                        <MudDivider Class="my-4" />
+                        
+                        <MudProgressLinear Color="@GetScoreColor()" 
+                                           Value="@GetScorePercentage()" 
+                                           Size="Size.Medium" 
+                                           Class="mb-2" />
+                        <MudText Typo="Typo.body2" Align="Align.Center">
+                            Điểm số: @GetScorePercentage():F1%
+                        </MudText>
+                    </MudCardContent>
+                </MudCard>
+
+                <!-- Question Details -->
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Chi tiết câu hỏi</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        @if (questions.Any())
+                        {
+                            <MudStack Spacing="3">
+                                @for (int i = 0; i < questions.Count; i++)
+                                {
+                                    var questionIndex = i;
+                                    var isCorrect = answers.Count > questionIndex && corrects.Count > questionIndex && 
+                                                   string.Equals(answers[questionIndex]?.Trim(), corrects[questionIndex]?.Trim(), StringComparison.OrdinalIgnoreCase);
+                                    
+                                    <MudCard Elevation="1" Style="@(isCorrect ? "border-left: 4px solid #4caf50;" : "border-left: 4px solid #f44336;")">
+                                        <MudCardContent>
+                                            <MudStack Spacing="2">
+                                                <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                                    <MudText Typo="Typo.subtitle2">Câu @(questionIndex + 1)</MudText>
+                                                    <MudIcon Icon="@(isCorrect ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)" 
+                                                             Color="@(isCorrect ? Color.Success : Color.Error)" />
+                                                </MudStack>
+                                                
+                                                <MudText Typo="Typo.body1" Style="font-weight: 500;">
+                                                    @(questions.Count > questionIndex ? questions[questionIndex] : "")
+                                                </MudText>
+                                                
+                                                <MudGrid>
+                                                    <MudItem xs="12" md="6">
+                                                        <MudAlert Severity="@(isCorrect ? Severity.Success : Severity.Error)" Class="pa-2">
+                                                            <MudText Typo="Typo.body2">
+                                                                <strong>Bạn chọn:</strong> @(answers.Count > questionIndex ? answers[questionIndex] : "Không trả lời")
+                                                            </MudText>
+                                                        </MudAlert>
+                                                    </MudItem>
+                                                    <MudItem xs="12" md="6">
+                                                        <MudAlert Severity="Severity.Info" Class="pa-2">
+                                                            <MudText Typo="Typo.body2">
+                                                                <strong>Đáp án đúng:</strong> @(corrects.Count > questionIndex ? corrects[questionIndex] : "")
+                                                            </MudText>
+                                                        </MudAlert>
+                                                    </MudItem>
+                                                </MudGrid>
+                                            </MudStack>
+                                        </MudCardContent>
+                                    </MudCard>
+                                }
+                            </MudStack>
+                        }
+                        else
+                        {
+                            <MudText>Không có dữ liệu chi tiết câu hỏi</MudText>
+                        }
+                    </MudCardContent>
+                </MudCard>
+
+                <!-- Summary -->
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Tổng kết</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudGrid>
+                            <MudItem xs="6" sm="3">
+                                <MudStack AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Quiz" Color="Color.Primary" Size="Size.Medium" />
+                                    <MudText Typo="Typo.h6">@totalQuestions</MudText>
+                                    <MudText Typo="Typo.caption">Tổng câu</MudText>
+                                </MudStack>
+                            </MudItem>
+                            <MudItem xs="6" sm="3">
+                                <MudStack AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Medium" />
+                                    <MudText Typo="Typo.h6">@Score.Points</MudText>
+                                    <MudText Typo="Typo.caption">Câu đúng</MudText>
+                                </MudStack>
+                            </MudItem>
+                            <MudItem xs="6" sm="3">
+                                <MudStack AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" Size="Size.Medium" />
+                                    <MudText Typo="Typo.h6">@(totalQuestions - Score.Points)</MudText>
+                                    <MudText Typo="Typo.caption">Câu sai</MudText>
+                                </MudStack>
+                            </MudItem>
+                            <MudItem xs="6" sm="3">
+                                <MudStack AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Percent" Color="Color.Warning" Size="Size.Medium" />
+                                    <MudText Typo="Typo.h6">@GetScorePercentage():F1%</MudText>
+                                    <MudText Typo="Typo.caption">Tỷ lệ đúng</MudText>
+                                </MudStack>
+                            </MudItem>
+                        </MudGrid>
+                    </MudCardContent>
+                </MudCard>
+            </MudStack>
+        }
+    </DialogContent>
+    
+    <DialogActions>
+        <MudButton OnClick="Cancel">Đóng</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   StartIcon="@Icons.Material.Filled.Download">
+            Xuất PDF
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] 
+    public GetScoreByAuthorDTO Score { get; set; }
+
+    private List<string> questions = new();
+    private List<string> answers = new();
+    private List<string> corrects = new();
+    private int totalQuestions = 0;
+
+    protected override void OnInitialized()
+    {
+        if (Score != null)
+        {
+            questions = Score.Questions?.Split('|').Where(q => !string.IsNullOrEmpty(q)).ToList() ?? new List<string>();
+            answers = Score.Answers?.Split('|').ToList() ?? new List<string>();
+            corrects = Score.Corrects?.Split('|').ToList() ?? new List<string>();
+            totalQuestions = questions.Count;
+        }
+    }
+
+    void Cancel() => MudDialog.Cancel();
+
+    private Color GetScoreColor()
+    {
+        if (totalQuestions == 0) return Color.Default;
+        
+        var percentage = (double)Score.Points / totalQuestions * 100;
+        
+        if (percentage >= 80) return Color.Success;
+        if (percentage >= 60) return Color.Warning;
+        return Color.Error;
+    }
+
+    private double GetScorePercentage()
+    {
+        if (totalQuestions == 0) return 0;
+        return (double)Score.Points / totalQuestions * 100;
+    }
+}

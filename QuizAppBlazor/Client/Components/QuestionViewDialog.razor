@@ -1,0 +1,161 @@
+@using QuizAppBlazor.Client.DTOs
+
+<MudDialog>
+    <DialogContent>
+        @if (Question != null)
+        {
+            <MudStack Spacing="4">
+                <!-- Question Content -->
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Nội dung câu hỏi</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudText Typo="Typo.body1" Class="mb-4">@Question.Question</MudText>
+                        
+                        <MudStack Row Spacing="2">
+                            @if (Question.IsTextInput == true)
+                            {
+                                <MudChip T="string" Color="Color.Info" Text="Câu hỏi tự luận" />
+                            }
+                            else
+                            {
+                                <MudChip T="string" Color="Color.Success" Text="Câu hỏi trắc nghiệm" />
+                            }
+                            
+                            @if (Question.HasTimeLimit == true)
+                            {
+                                <MudChip T="string" Color="Color.Warning" Text="@($"Giới hạn thời gian: {Question.TimeLimit} giây")" />
+                            }
+                            else
+                            {
+                                <MudChip T="string" Color="Color.Default" Text="Không giới hạn thời gian" />
+                            }
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+
+                <!-- Media Content -->
+                @if (!string.IsNullOrEmpty(Question.ImageVideo))
+                {
+                    <MudCard>
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">Media</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            @if (Question.IsImage == true)
+                            {
+                                <MudImage Src="@Question.ImageVideo" 
+                                          Alt="Question Image" 
+                                          Style="max-width: 100%; height: auto; border-radius: 8px;" />
+                            }
+                            else if (Question.IsVideo == true)
+                            {
+                                <video controls style="max-width: 100%; height: auto; border-radius: 8px;">
+                                    <source src="@Question.ImageVideo" type="video/mp4">
+                                    Trình duyệt không hỗ trợ video.
+                                </video>
+                            }
+                            else if (Question.IsYoutubeVideo == true)
+                            {
+                                <MudStack AlignItems="AlignItems.Center">
+                                    <MudLink Href="@Question.ImageVideo" Target="_blank">
+                                        <MudButton Variant="Variant.Outlined" 
+                                                   Color="Color.Error" 
+                                                   StartIcon="@Icons.Custom.Brands.YouTube">
+                                            Xem trên YouTube
+                                        </MudButton>
+                                    </MudLink>
+                                </MudStack>
+                            }
+                            else
+                            {
+                                <MudLink Href="@Question.ImageVideo" Target="_blank">
+                                    @Question.ImageVideo
+                                </MudLink>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                }
+
+                <!-- Answer Options -->
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Đáp án</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        @if (Question.IsTextInput == true)
+                        {
+                            <MudAlert Severity="Severity.Success" Class="mb-2">
+                                <MudText><strong>Đáp án đúng:</strong> @Question.CorrectAnswer</MudText>
+                            </MudAlert>
+                        }
+                        else
+                        {
+                            <MudStack Spacing="2">
+                                <MudAlert Severity="Severity.Success">
+                                    <MudText><strong>A. @Question.CorrectAnswer</strong> ✓</MudText>
+                                </MudAlert>
+                                
+                                @if (!string.IsNullOrEmpty(Question.Alternativ2))
+                                {
+                                    <MudAlert Severity="Severity.Normal">
+                                        <MudText>B. @Question.Alternativ2</MudText>
+                                    </MudAlert>
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(Question.Alternativ3))
+                                {
+                                    <MudAlert Severity="Severity.Normal">
+                                        <MudText>C. @Question.Alternativ3</MudText>
+                                    </MudAlert>
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(Question.Alternativ4))
+                                {
+                                    <MudAlert Severity="Severity.Normal">
+                                        <MudText>D. @Question.Alternativ4</MudText>
+                                    </MudAlert>
+                                }
+                            </MudStack>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudStack>
+        }
+    </DialogContent>
+    
+    <DialogActions>
+        <MudButton OnClick="Cancel">Đóng</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="@(() => EditQuestion())">
+            Chỉnh sửa
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] 
+    public GetQuestionsDTO Question { get; set; }
+
+    [Inject]
+    public NavigationManager Navigation { get; set; }
+
+    void Cancel() => MudDialog.Cancel();
+
+    void EditQuestion()
+    {
+        MudDialog.Close();
+        Navigation.NavigateTo($"/questions/edit/{Question.Id}");
+    }
+}

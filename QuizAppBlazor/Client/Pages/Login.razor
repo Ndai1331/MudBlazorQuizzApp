@@ -1,98 +1,203 @@
 ﻿@page "/login"
 @using QuizAppBlazor.Client.DTOs
 @using QuizAppBlazor.Client.Providers
-@using System.Text.RegularExpressions
+@using QuizAppBlazor.Client.Services
 @using System.ComponentModel.DataAnnotations
 @layout LoginLayout
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
 @inject IJSRuntime JsRuntime
-@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject NavigationManager Navigation
 @inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
 
+<style>
+    .login-background {
+        min-height: 100vh;
+        background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url('./background.jpg');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+    }
 
-<MudGrid>
-    <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full">
-        <h2 class="mud-typography mud-typography-h2 docs-title d-inline">ĐĂNG NHẬP&nbsp;</h2>
-        <h2 class="mud-typography mud-typography-h2 mud-primary-text docs-title d-inline">QUIZZ</h2>
+    .login-card {
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 16px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+    }
 
-    </MudItem>
-    <MudItem xs="12" sm="12" Class="d-flex align-center justify-center py-2">
-        <MudPaper Class="d-flex align-center justify-center pa-2" style="max-width: 400px;">
-            <MudForm style="min-width: 300px;" @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
-                <MudTextField T="string" Label="Tên đăng nhập hoặc nickname" @bind-Value="model.Email" Required="true"
-                    RequiredError="Nhập tên đăng nhập hoặc nickname" Typo="Typo.subtitle2" />
-                <MudTextField Class="py-4" T="string" Label="Mật khẩu" @bind-Value="model.Password"
-                    InputType="InputType.Password" @onkeyup="@OnKeyPressAsync" Required="true"
-                    RequiredError="Nhập mật khẩu!" Typo="Typo.subtitle2" />
+    .login-title {
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        color: white;
+        font-weight: bold;
+    }
+
+    .login-subtitle {
+        color: #ff6b35;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        font-weight: bold;
+    }
+</style>
+
+<div class="login-background">
+    <div Class="d-flex align-center justify-center" Style="min-height: 100vh;">
+        <MudItem xs="12" Class="d-flex align-center justify-center mud-width-full py-4">
+            <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                <h2 class="login-title">ĐĂNG NHẬP HỆ THỐNG</h2>
+                <h1 class="login-subtitle">BẢO MẬT TRẮC NGHIỆM</h1>
+            </MudStack>
+        </MudItem>
+        
+        <MudItem xs="12" sm="12" Class="d-flex align-center justify-center py-2">
+            <MudPaper Class="login-card pa-6" style="max-width: 450px; width: 100%;" Elevation="0">
+            <EditForm Model="@model" OnValidSubmit="@LoginAsync">
+                <DataAnnotationsValidator />
+                
+                <MudStack Spacing="4">
+                    <MudTextField @bind-Value="model.Email" 
+                                  Label="Email hoặc Nickname" 
+                                  Variant="Variant.Outlined"
+                                  For="@(() => model.Email)"
+                                  HelperText="Nhập email hoặc nickname của bạn"
+                                  Adornment="Adornment.Start" 
+                                  AdornmentIcon="@personIcon" />
+
+                    <MudTextField @bind-Value="model.Password" 
+                                  Label="Mật khẩu" 
+                                  Variant="Variant.Outlined"
+                                  InputType="@passwordInputType"
+                                  For="@(() => model.Password)"
+                                  @onkeyup="@OnKeyPressAsync"
+                                  Adornment="Adornment.End" 
+                                  AdornmentIcon="@passwordIcon" 
+                                  OnAdornmentClick="@TogglePasswordVisibility" />
+
+                    <MudCheckBox @bind-Value="model.RememberMe" 
+                                 Label="Ghi nhớ đăng nhập" 
+                                 Color="Color.Primary" />
 
                     @if (isLoading)
                     {
-                    <div class="d-flex align-center py-1">
-                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
-                    </div>
-                }
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                    }
 
-
-                <div class="d-flex align-center py-1">
-                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto" OnClick="@LoginAsync">
-                        <span>Đăng nhập</span>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               Size="Size.Large"
+                               FullWidth="true"
+                               ButtonType="ButtonType.Submit"
+                               Disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+                            <MudText Class="ms-2">Đang đăng nhập...</MudText>
+                        }
+                        else
+                        {
+                            <MudText>Đăng nhập</MudText>
+                        }
                     </MudButton>
-                </div>
-                <div class="d-flex align-center justify-end py-1">
-                    <MudLink href="/register">
-                        <span>Chưa có tài khoản? Đăng ký</span>
-                    </MudLink>
-                </div>
-                @if (errors.Length > 0)
-                {
-                    <MudText Color="@Color.Error">@errors[0]</MudText>
-                }
-            </MudForm>
-        </MudPaper>
-    </MudItem>
-</MudGrid>
+
+                    <MudDivider />
+
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Primary" 
+                               FullWidth="true"
+                               OnClick="@NavigateToRegister">
+                        Chưa có tài khoản? Đăng ký ngay
+                    </MudButton>
+                </MudStack>
+
+                <ValidationSummary />
+            </EditForm>
+            </MudPaper>
+        </MudItem>
+    </div>
+</div>
 
 
 @code {
     private UserLoginDto model = new UserLoginDto();
-    bool success;
-    bool isLoading = false;
-    string[] errors = { };
-    MudForm form;
-    private void RedirectToQuizzes()
+    private bool isLoading = false;
+    private bool isPasswordVisible = false;
+    
+    private InputType passwordInputType => isPasswordVisible ? InputType.Text : InputType.Password;
+    private string passwordIcon => isPasswordVisible ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+    private string personIcon => Icons.Material.Filled.Person;
+
+    protected override async Task OnInitializedAsync()
     {
-        Navigation.NavigateTo($"/");
+        // Check if user is already logged in
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState.User?.Identity?.IsAuthenticated == true)
+        {
+            Navigation.NavigateTo("/", true);
+        }
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        isPasswordVisible = !isPasswordVisible;
     }
 
     private async Task OnKeyPressAsync(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter")
+        if (e.Key == "Enter" && !isLoading)
         {
             await LoginAsync();
         }
     }
+
     private async Task LoginAsync()
     {
+        if (isLoading) return;
+
         isLoading = true;
-        var response = await Http.PostAsJsonAsync<UserLoginDto>($"api/Quizz/user/login", model);
-        if (response.IsSuccessStatusCode)
+        StateHasChanged();
+
+        try
         {
-            var user = await response.Content.ReadFromJsonAsync<UserAuthDto>();
-            if (user.Message == "")
+            var user = await ApiService.LoginAsync(model);
+            
+            if (string.IsNullOrEmpty(user.Message))
             {
-                await JsRuntime.InvokeVoidAsync("localStorage.setItem", "token", user.BearerToken);
-                await JsRuntime.InvokeVoidAsync("localStorage.setItem", "role", user.Role);
-                await JsRuntime.InvokeVoidAsync("localStorage.setItem", "id", user.Id);
-                await JsRuntime.InvokeVoidAsync("localStorage.setItem", "email", user.Email);
-                ((CustomAuthenticationStateProvider)AuthenticationStateProvider).MarkUserAsAuthenticated(user);
-                RedirectToQuizzes();
+                // Store user info in localStorage
+                await LocalStorage.SetItemAsync("token", user.BearerToken);
+                await LocalStorage.SetItemAsync("role", user.Role);
+                await LocalStorage.SetItemAsync("id", user.Id.ToString());
+                await LocalStorage.SetItemAsync("email", user.Email);
+                await LocalStorage.SetItemAsync("nickname", user.Nickname);
+
+                // Update authentication state
+                await Task.Run(() => ((CustomAuthenticationStateProvider)AuthenticationStateProvider).MarkUserAsAuthenticated(user));
+                
+                Snackbar.Add("Đăng nhập thành công!", Severity.Success);
+                
+                // Redirect to home page
+                Navigation.NavigateTo("/", true);
             }
             else
             {
-                errors = new string[] { user.Message };
+                Snackbar.Add(user.Message, Severity.Error);
             }
         }
-        isLoading = false;
-        StateHasChanged();
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi kết nối: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void NavigateToRegister()
+    {
+        Navigation.NavigateTo("/register");
     }
 }
+

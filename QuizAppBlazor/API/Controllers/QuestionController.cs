@@ -1,12 +1,9 @@
 ﻿using System.Security.Claims;
-using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using QuizAppBlazor.API.Data;
 using QuizAppBlazor.API.DTOs;
-using QuizAppBlazor.API.HttpResonpse;
-using QuizAppBlazor.API.Models;
+using QuizAppBlazor.API.HttpResponse;
+using QuizAppBlazor.API.Services;
 
 namespace QuizAppBlazor.API.Controllers
 {
@@ -15,16 +12,18 @@ namespace QuizAppBlazor.API.Controllers
     [Authorize]
     public class QuestionController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IQuestionService _questionService;
+        private readonly QuizAppBlazor.API.Services.IAuditLogService _auditLog;
 
-        public QuestionController(ApplicationDbContext context)
+        public QuestionController(IQuestionService questionService, QuizAppBlazor.API.Services.IAuditLogService auditLog)
         {
-            _context = context;
+            _questionService = questionService;
+            _auditLog = auditLog;
         }
         // GET: api/questions
         [HttpGet]
         [Route("list")]
-        public ActionResult<ResponseBaseHttp<IEnumerable<GetQuestionsDTO>>> GetQuestions(
+        public async Task<ActionResult<ResponseBaseHttp<IEnumerable<GetQuestionsDTO>>>> GetQuestions(
             string question = "",
             int skip = 0,
             int take = 10
@@ -33,172 +32,83 @@ namespace QuizAppBlazor.API.Controllers
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (userId == null)
             {
-                throw new ArgumentNullException("userId");
+                return Unauthorized("User not authenticated");
             }
-
-            IEnumerable<GetQuestionsDTO> result;
 
             try
             {
-                var query = (
-                    from q in _context.Questions
-                    where
-                         (
-                            !string.IsNullOrEmpty(question)
-                                ? q.Question.Trim()
-                                    .ToLower()
-                                    .Contains(question.Trim().ToLower())
-                                : true
-                        )
-                    orderby q.Id descending
-                    select new GetQuestionsDTO
-                    {
-                        Id = q.Id,
-                        Question = q.Question,
-                        CorrectAnswer = q.CorrectAnswer,
-                        Alternativ2 = q.Alternativ2,
-                        Alternativ3 = q.Alternativ3,
-                        Alternativ4 = q.Alternativ4,
-                        IsTextInput = q.IsTextInput,
-                        ImageVideo = q.ImageVideo,
-                        IsImage = q.IsImage,
-                        IsVideo = q.IsVideo,
-                        IsYoutubeVideo = q.IsYoutubeVideo,
-                        HasTimeLimit = q.HasTimeLimit,
-                        TimeLimit = q.TimeLimit
-                    }
-                );
-
-                int totalRecords = query.Count();
-                int totalPages = (int)Math.Ceiling((double)totalRecords / take);
-
-                result = query.Skip(skip).Take(take).ToList();
-
-                return Ok(
-                    new ResponseBaseHttp<IEnumerable<GetQuestionsDTO>>
-                    {
-                        Result = result,
-                        TotalPages = totalPages,
-                        TotalRecords = totalRecords
-                    }
-                );
+                var result = await _questionService.GetQuestionsAsync(question, skip, take);
+                return Ok(result);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                return BadRequest($"ERROR: {e}");
+                return StatusCode(500, new ResponseBaseHttp<IEnumerable<GetQuestionsDTO>>
+                {
+                    Result = new List<GetQuestionsDTO>()
+                });
             }
         }
 
         [HttpGet]
         [Route("{id}")]
-        public ActionResult<ResponseBaseHttp<GetQuestionsDTO>> GetQuestionById(
-          string id
-      )
+        public async Task<ActionResult<ResponseBaseHttp<GetQuestionsDTO>>> GetQuestionById(string id)
         {
-            GetQuestionsDTO result;
+            if (!int.TryParse(id, out int questionId))
+            {
+                return BadRequest(new ResponseBaseHttp<GetQuestionsDTO> { Result = null });
+            }
+
             try
             {
-                var query = (
-                    from q in _context.Questions
-                    where q.Id == int.Parse(id)
-                    select new GetQuestionsDTO
-                    {
-                        Id = q.Id,
-                        Question = q.Question,
-                        CorrectAnswer = q.CorrectAnswer,
-                        Alternativ2 = q.Alternativ2,
-                        Alternativ3 = q.Alternativ3,
-                        Alternativ4 = q.Alternativ4,
-                        IsTextInput = q.IsTextInput,
-                        ImageVideo = q.ImageVideo == null ? string.Empty : q.ImageVideo,
-                        IsImage = q.IsImage,
-                        IsVideo = q.IsVideo,
-                        IsYoutubeVideo = q.IsYoutubeVideo,
-                        HasTimeLimit = q.HasTimeLimit,
-                        TimeLimit = q.TimeLimit
-                    }
-                );
-
-                result = query.FirstOrDefault();
-
-                return Ok(
-                    new ResponseBaseHttp<GetQuestionsDTO>
-                    {
-                        Result = result
-                    }
-                );
+                var result = await _questionService.GetQuestionByIdAsync(questionId);
+                return Ok(result);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                return BadRequest($"ERROR: {e}");
+                return StatusCode(500, new ResponseBaseHttp<GetQuestionsDTO> { Result = null });
             }
         }
 
         [HttpGet]
         [Route("random")]
-        public ActionResult<IEnumerable<GetQuestionsDTO>> GetRandomQuestion()
+        public async Task<ActionResult<IEnumerable<GetQuestionsDTO>>> GetRandomQuestion()
         {
             try
             {
-                var result = _context
-                    .Questions
-                    .OrderBy(x => Guid.NewGuid())
-                    .Take(15)
-                    .Select(x => new GetQuestionsDTO
-                    {
-                        Question = x.Question,
-                        CorrectAnswer = x.CorrectAnswer,
-                        Alternativ2 = x.Alternativ2,
-                        Alternativ3 = x.Alternativ3,
-                        Alternativ4 = x.Alternativ4,
-                        IsTextInput = x.IsTextInput,
-                        ImageVideo = x.ImageVideo,
-                        IsImage = x.IsImage,
-                        IsVideo = x.IsVideo,
-                        IsYoutubeVideo = x.IsYoutubeVideo,
-                        HasTimeLimit = x.HasTimeLimit,
-                        TimeLimit = x.TimeLimit
-                    });
-
-                return Ok(result.ToList());
+                var result = await _questionService.GetRandomQuestionsAsync();
+                return Ok(result);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Console.WriteLine("ERROR: " + e.Message);
-                return BadRequest("ERROR:" + e);
+                return StatusCode(500, "Internal server error");
             }
         }
 
         // POST: api/question/create
         [HttpPost]
         [Route("create")]
-        public IActionResult CreateQuestion([FromBody] CreateQuestionDTO newQuestion)
+        public async Task<ActionResult<ResponseBaseHttp<string>>> CreateQuestion([FromBody] CreateQuestionDTO newQuestion)
         {
-            //Console.WriteLine("HEEELLLOOO");
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (userId == null)
             {
-                throw new ArgumentNullException("userId");
+                return Unauthorized(new ResponseBaseHttp<string> { Result = "User not authenticated" });
             }
 
-            var result = new QuestionModel()
+            try
             {
-                Question = newQuestion.Question,
-                CorrectAnswer = newQuestion.CorrectAnswer,
-                Alternativ2 = newQuestion.Alternativ2,
-                Alternativ3 = newQuestion.Alternativ3,
-                Alternativ4 = newQuestion.Alternativ4,
-                IsTextInput = newQuestion.IsTextInput,
-                ImageVideo = newQuestion.ImageVideo,
-                IsImage = newQuestion.IsImage,
-                IsVideo = newQuestion.IsVideo,
-                IsYoutubeVideo = newQuestion.IsYoutubeVideo,
-                HasTimeLimit = newQuestion.HasTimeLimit,
-                TimeLimit = newQuestion.TimeLimit
-            };
-            _context.Add(result);
-            _context.SaveChanges();
-            return Ok();
+                var result = await _questionService.CreateQuestionAsync(newQuestion);
+                if (string.IsNullOrEmpty(result.Result))
+                {
+                    await _auditLog.LogQuestionActivityAsync(userId, 0, "CREATE", $"Created question: {newQuestion.Question}");
+                    return Ok(result);
+                }
+                return BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ResponseBaseHttp<string> { Result = "Internal server error" });
+            }
         }
 
 
@@ -208,32 +118,23 @@ namespace QuizAppBlazor.API.Controllers
         [Route("{id}")]
         public async Task<ActionResult<ResponseBaseHttp<string>>> UpdateQuestion([FromBody] CreateQuestionDTO newQuestion, string id)
         {
+            if (!int.TryParse(id, out int questionId))
+            {
+                return BadRequest(new ResponseBaseHttp<string> { Result = "Invalid question ID" });
+            }
+
             try
             {
-                var questionModel = await _context.Questions.FindAsync(int.Parse(id));
-                if (questionModel == null)
+                var result = await _questionService.UpdateQuestionAsync(questionId, newQuestion);
+                if (string.IsNullOrEmpty(result.Result))
                 {
-                    return BadRequest(new ResponseBaseHttp<string> { Result = "Không tìm thấy câu hỏi" });
+                    return Ok(result);
                 }
-                questionModel.Question = newQuestion.Question;
-                questionModel.CorrectAnswer = newQuestion.CorrectAnswer;
-                questionModel.Alternativ2 = newQuestion.Alternativ2;
-                questionModel.Alternativ3 = newQuestion.Alternativ3;
-                questionModel.Alternativ4 = newQuestion.Alternativ4;
-                questionModel.IsTextInput = newQuestion.IsTextInput;
-                questionModel.ImageVideo = newQuestion.ImageVideo;
-                questionModel.IsImage = newQuestion.IsImage;
-                questionModel.IsVideo = newQuestion.IsVideo;
-                questionModel.IsYoutubeVideo = newQuestion.IsYoutubeVideo;
-                questionModel.HasTimeLimit = newQuestion.HasTimeLimit;
-                questionModel.TimeLimit = newQuestion.TimeLimit;
-                _context.Update(questionModel);
-                await _context.SaveChangesAsync();
-                return Ok(new ResponseBaseHttp<string> { Result = string.Empty });
+                return BadRequest(result);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                return BadRequest(new ResponseBaseHttp<string> { Result = e.Message });
+                return StatusCode(500, new ResponseBaseHttp<string> { Result = "Internal server error" });
             }
         }
 
@@ -242,24 +143,23 @@ namespace QuizAppBlazor.API.Controllers
         [Route("{id}")]
         public async Task<ActionResult<ResponseBaseHttp<string>>> DeleteQuestion(string id)
         {
+            if (!int.TryParse(id, out int questionId))
+            {
+                return BadRequest(new ResponseBaseHttp<string> { Result = "Invalid question ID" });
+            }
+
             try
             {
-                var questionModel = await _context.Questions.FindAsync(int.Parse(id));
-                if (questionModel == null)
+                var result = await _questionService.DeleteQuestionAsync(questionId);
+                if (string.IsNullOrEmpty(result.Result))
                 {
-                    return BadRequest(new ResponseBaseHttp<string> { Result = "Không tìm thấy câu hỏi" });
+                    return Ok(result);
                 }
-                _context.Remove(questionModel);
-                int result = await _context.SaveChangesAsync();
-                if (result > 0)
-                {
-                    return Ok(new ResponseBaseHttp<string> { Result = string.Empty });
-                }
-                return BadRequest(new ResponseBaseHttp<string> { Result = "Không thể xóa câu hỏi." });
+                return BadRequest(result);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                return BadRequest(new ResponseBaseHttp<string> { Result = e.Message });
+                return StatusCode(500, new ResponseBaseHttp<string> { Result = "Internal server error" });
             }
         }
 

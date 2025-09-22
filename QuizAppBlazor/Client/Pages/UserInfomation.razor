@@ -15,7 +15,7 @@
         <MudPaper Class="d-flex align-center justify-center pa-2" style="max-width: 400px;">
             <MudForm style="min-width: 300px;" @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
                 <MudTextField T="string" Label="Tên đăng nhập" @bind-Value="model.Email" Required="true"
-                    RequiredError="Nhập tên đăng nhập" Typo="Typo.subtitle2" />
+                    RequiredError="Nhập tên đăng nhập" Typo="Typo.subtitle2" Disabled="true" />
 
                 <MudTextField T="string" Label="Nickname" @bind-Value="model.Nickname" Required="true"
                     RequiredError="Nhập nickname" Typo="Typo.subtitle2" />
@@ -58,10 +58,22 @@
         string id = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "id");
         if (!string.IsNullOrEmpty(id))
         {
-            var response = await Http.GetFromJsonAsync<UserAuthDto>($"api/Quizz/user/{id}");
-            if (response != null)
+            try
             {
-                model = response;
+                id = id.Replace("\"", "");
+                var response = await ApiService.GetUserByIdAsync(id);
+                if (response != null && string.IsNullOrEmpty(response.Message))
+                {
+                    model = response;
+                }
+                else if (!string.IsNullOrEmpty(response?.Message))
+                {
+                    await ShowErrorAsync(response.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                await ShowErrorAsync($"Lỗi khi tải thông tin người dùng: {ex.Message}");
             }
         }
     }
@@ -74,20 +86,37 @@
     private async Task UpdateAsync()
     {
         isLoading = true;
-        var response = await Http.PostAsJsonAsync<UserAuthDto>($"api/Quizz/user/update", model);
-        if (response.IsSuccessStatusCode)
+        try
         {
-            var message = await response.Content.ReadFromJsonAsync<string>();
-            if (string.IsNullOrEmpty(message))
+            var response = await Http.PostAsJsonAsync<UserAuthDto>($"api/Quizz/user/update", model);
+            if (response.IsSuccessStatusCode)
             {
-                await _jsRuntime.InvokeVoidAsync("alert", "Cập nhật thành công");
+                var message = await response.Content.ReadFromJsonAsync<string>();
+                if (string.IsNullOrEmpty(message))
+                {
+                    await ShowSuccessAsync("Cập nhật thành công");
+                    errors = new string[] { };
+                }
+                else
+                {
+                    errors = new string[] { message };
+                }
             }
             else
             {
-                errors = new string[] { message };
+                var errorMessage = await response.Content.ReadAsStringAsync();
+                errors = new string[] { $"Lỗi cập nhật: {errorMessage}" };
             }
         }
-        isLoading = false;
-        StateHasChanged();
+        catch (Exception ex)
+        {
+            await ShowErrorAsync($"Lỗi khi cập nhật: {ex.Message}");
+            errors = new string[] { ex.Message };
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
     }
 }

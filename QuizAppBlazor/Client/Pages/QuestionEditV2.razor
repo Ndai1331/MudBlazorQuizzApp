@@ -1,0 +1,253 @@
+@page "/questions/edit/{id:int}"
+@using QuizAppBlazor.Client.DTOs
+@using System.ComponentModel.DataAnnotations
+@inherits BaseBlazorPage
+
+<PageTitle>Chỉnh sửa câu hỏi</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudCard>
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6">Chỉnh sửa câu hỏi #@Id</MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        
+        <MudCardContent>
+            @if (IsLoading)
+            {
+                <MudStack AlignItems="AlignItems.Center" Class="pa-8">
+                    <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+                    <MudText>Đang tải câu hỏi...</MudText>
+                </MudStack>
+            }
+            else if (model != null)
+            {
+                <EditForm Model="@model" OnValidSubmit="@HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="model.Question" 
+                                          Label="Câu hỏi" 
+                                          Variant="Variant.Outlined"
+                                          Lines="3"
+                                          For="@(() => model.Question)" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudSwitch @bind-Value="model.IsTextInput" 
+                                       Label="Câu hỏi tự luận" 
+                                       Color="Color.Primary" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudSwitch @bind-Value="model.HasTimeLimit" 
+                                       Label="Có giới hạn thời gian" 
+                                       Color="Color.Primary" />
+                        </MudItem>
+
+                        @if (model.HasTimeLimit)
+                        {
+                            <MudItem xs="12" sm="6">
+                                <MudNumericField @bind-Value="model.TimeLimit" 
+                                                 Label="Thời gian (giây)" 
+                                                 Variant="Variant.Outlined"
+                                                 Min="10" 
+                                                 Max="300" />
+                            </MudItem>
+                        }
+
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="model.CorrectAnswer" 
+                                          Label="Đáp án đúng" 
+                                          Variant="Variant.Outlined"
+                                          For="@(() => model.CorrectAnswer)" />
+                        </MudItem>
+
+                        @if (!model.IsTextInput)
+                        {
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="model.Alternativ2" 
+                                              Label="Lựa chọn B" 
+                                              Variant="Variant.Outlined" />
+                            </MudItem>
+
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="model.Alternativ3" 
+                                              Label="Lựa chọn C" 
+                                              Variant="Variant.Outlined" />
+                            </MudItem>
+
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="model.Alternativ4" 
+                                              Label="Lựa chọn D" 
+                                              Variant="Variant.Outlined" />
+                            </MudItem>
+                        }
+
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="model.ImageVideo" 
+                                          Label="URL Media (tùy chọn)" 
+                                          Variant="Variant.Outlined" />
+                        </MudItem>
+
+                        <MudItem xs="4">
+                            <MudSwitch @bind-Value="model.IsImage" 
+                                       Label="Hình ảnh" 
+                                       Color="Color.Primary" />
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudSwitch @bind-Value="model.IsVideo" 
+                                       Label="Video" 
+                                       Color="Color.Primary" />
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudSwitch @bind-Value="model.IsYoutubeVideo" 
+                                       Label="YouTube" 
+                                       Color="Color.Primary" />
+                        </MudItem>
+                    </MudGrid>
+
+                    <ValidationSummary />
+                </EditForm>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Error">
+                    Không tìm thấy câu hỏi với ID: @Id
+                </MudAlert>
+            }
+        </MudCardContent>
+        
+        <MudCardActions>
+            <MudButton Variant="Variant.Text" 
+                       OnClick="@NavigateBack">
+                Hủy
+            </MudButton>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       OnClick="@HandleValidSubmit"
+                       Disabled="@(isSubmitting || model == null)">
+                @if (isSubmitting)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+                    <MudText Class="ms-2">Đang lưu...</MudText>
+                }
+                else
+                {
+                    <MudText>Lưu thay đổi</MudText>
+                }
+            </MudButton>
+        </MudCardActions>
+    </MudCard>
+</MudContainer>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    
+    private CreateQuestionDTO? model;
+    private bool isSubmitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        
+        bool isLoggedIn = await IsAuthenticatedAsync();
+        if (!isLoggedIn)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        
+        Http = await AttachToken();
+        await LoadQuestion();
+    }
+
+    private async Task LoadQuestion()
+    {
+        IsLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await ApiService.GetQuestionByIdAsync(Id);
+            
+            if (result.Result != null)
+            {
+                model = new CreateQuestionDTO
+                {
+                    Question = result.Result.Question,
+                    CorrectAnswer = result.Result.CorrectAnswer,
+                    Alternativ2 = result.Result.Alternativ2 ?? string.Empty,
+                    Alternativ3 = result.Result.Alternativ3 ?? string.Empty,
+                    Alternativ4 = result.Result.Alternativ4 ?? string.Empty,
+                    IsTextInput = result.Result?.IsTextInput ?? false,
+                    ImageVideo = result.Result?.ImageVideo ?? string.Empty,
+                    IsImage = result.Result?.IsImage ?? false,
+                    IsVideo = result.Result?.IsVideo ?? false,
+                    IsYoutubeVideo = result.Result?.IsYoutubeVideo ?? false,
+                    HasTimeLimit = result.Result?.HasTimeLimit ?? true,
+                    TimeLimit = result.Result?.TimeLimit ?? 60
+                };
+            }
+            else
+            {
+                await ShowErrorAsync($"Không tìm thấy câu hỏi với ID: {Id}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync($"Lỗi tải câu hỏi: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (isSubmitting || model == null) return;
+
+        if (!model.IsValid())
+        {
+            await ShowWarningAsync("Câu hỏi trắc nghiệm phải có ít nhất một lựa chọn thay thế");
+            return;
+        }
+
+        isSubmitting = true;
+        StateHasChanged();
+        
+        try
+        {
+            var result = await ApiService.UpdateQuestionAsync(Id, model);
+            
+            if (string.IsNullOrEmpty(result.Result))
+            {
+                await ShowSuccessAsync("Cập nhật câu hỏi thành công!");
+                Navigation.NavigateTo("/questions-v2");
+            }
+            else
+            {
+                await ShowErrorAsync($"Lỗi: {result.Result}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync($"Lỗi kết nối: {ex.Message}");
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo("/questions-v2");
+    }
+}

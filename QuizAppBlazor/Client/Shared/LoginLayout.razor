@@ -9,9 +9,11 @@
     @* <MudAppBar Elevation="1">
     <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@DarkModeToggle" />
     </MudAppBar> *@
-    <MudMainContent Class="mt-16 pa-4">
-        @Body
-    </MudMainContent>
+    @* <MudMainContent> *@
+       
+    @* </MudMainContent> *@
+    
+    @Body
 </MudLayout>
 @code {
     private void DarkModeToggle()

@@ -1,0 +1,147 @@
+@page "/quiz-history"
+@using QuizAppBlazor.Client.DTOs
+@using QuizAppBlazor.Client.HttpResponse
+@inherits BaseBlazorPage
+
+<PageTitle>Lịch sử thi</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudStack Spacing="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudText Typo="Typo.h4" Color="Color.Primary">
+                    <MudIcon Icon="Icons.Material.Filled.History" Class="mr-2" />
+                    Lịch sử thi của bạn
+                </MudText>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                           OnClick="@NavigateToHome">
+                    Thi mới
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Class="pa-4" Elevation="1">
+            @if (IsLoading)
+            {
+                <MudStack AlignItems="AlignItems.Center" Class="pa-8">
+                    <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+                    <MudText>Đang tải lịch sử thi...</MudText>
+                </MudStack>
+            }
+            else if (scores?.Any() == true)
+            {
+                <MudTable Items="@scores" Hover="true" Breakpoint="Breakpoint.Sm">
+                    <HeaderContent>
+                        <MudTh>Ngày thi</MudTh>
+                        <MudTh>Kết quả</MudTh>
+                        <MudTh>Điểm số</MudTh>
+                        <MudTh>Thao tác</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Ngày thi">
+                            <MudStack>
+                                <MudText Typo="Typo.body2">@context.Date?.ToString("dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture)</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Date?.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture)</MudText>
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="Kết quả">
+                            @{
+                                var totalQuestions = context.Questions?.Split('|').Length ?? 0;
+                            }
+                            <MudText>@context.Points/@totalQuestions câu đúng</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Điểm số">
+                            @{
+                                var totalQuestions = context.Questions?.Split('|').Length ?? 0;
+                                var percentage = totalQuestions > 0 ? (double)context.Points / totalQuestions * 100 : 0;
+                            }
+                            <MudChip T="string" Color="@GetScoreColor(context.Points, totalQuestions)" 
+                                     Text="@($"{percentage:F1}%")" />
+                        </MudTd>
+                        <MudTd DataLabel="Thao tác">
+                            <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                           Color="Color.Info" 
+                                           OnClick="@(() => ViewScoreDetails(context))" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+            else
+            {
+                <MudStack AlignItems="AlignItems.Center" Class="pa-8">
+                    <MudIcon Icon="@Icons.Material.Filled.HistoryEdu" Size="Size.Large" Color="Color.Default" />
+                    <MudText Typo="Typo.h6" Color="Color.Default">Bạn chưa có lịch sử thi nào</MudText>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.PlayArrow"
+                               OnClick="@NavigateToHome">
+                        Bắt đầu thi ngay
+                    </MudButton>
+                </MudStack>
+            }
+        </MudPaper>
+    </MudStack>
+</MudContainer>
+
+@code {
+    private IEnumerable<GetScoreByAuthorDTO> scores = new List<GetScoreByAuthorDTO>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        
+        bool isLoggedIn = await IsAuthenticatedAsync();
+        if (!isLoggedIn)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        
+        Http = await AttachToken();
+        await LoadScores();
+    }
+
+    private async Task LoadScores()
+    {
+        IsLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await ApiService.GetScoresAsync("", 0, 50);
+            scores = result.Result ?? new List<GetScoreByAuthorDTO>();
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync($"Lỗi tải lịch sử thi: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void NavigateToHome()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private async Task ViewScoreDetails(GetScoreByAuthorDTO score)
+    {
+        await ShowInfoAsync("Tính năng xem chi tiết đang được phát triển");
+    }
+
+    private Color GetScoreColor(int correctAnswers, int totalQuestions)
+    {
+        if (totalQuestions == 0) return Color.Default;
+        
+        var percentage = (double)correctAnswers / totalQuestions * 100;
+        
+        if (percentage >= 80) return Color.Success;
+        if (percentage >= 60) return Color.Warning;
+        return Color.Error;
+    }
+}

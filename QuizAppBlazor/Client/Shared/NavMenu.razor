@@ -4,25 +4,74 @@
 @inherits BaseBlazorPage
 @inject IJSRuntime JsRuntime
 
+<style>
+    .mud-nav-menu .mud-nav-link {
+        color: #333333 !important;
+    }
+    
+    .mud-nav-menu .mud-nav-link:hover {
+        color: #1976d2 !important;
+        background-color: rgba(25, 118, 210, 0.08) !important;
+    }
+    
+    .mud-nav-menu .mud-nav-link.mud-nav-link-active {
+        color: white !important;
+        background-color: #1976d2 !important;
+    }
+    
+    .mud-nav-menu .mud-nav-group .mud-nav-group-text {
+        color: #555555 !important;
+        font-weight: 600;
+    }
+</style>
 
 <MudNavMenu>
     <AuthorizeView>
         <Authorized>
-            <MudNavLink Href="/" Match="NavLinkMatch.Prefix">Thực hiện thi</MudNavLink>
+            <MudNavGroup Title="Hệ thống thi" Icon="@Icons.Material.Filled.Quiz" Expanded="true">
+                <MudNavLink Href="/" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.PlayArrow">
+                    Bắt đầu thi
+                </MudNavLink>
+                <MudNavLink Href="/quiz-history" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.History">
+                    Lịch sử thi
+                </MudNavLink>
+            </MudNavGroup>
+
             @if (UserLoggedIn != null && UserLoggedIn.Role == "Admin")
             {
-                <MudNavLink Href="/questions" Match="NavLinkMatch.Prefix">Danh sách câu hỏi</MudNavLink>
-                <MudNavLink Href="/report" Match="NavLinkMatch.Prefix">Kết quả thi</MudNavLink>
-                <MudNavLink Href="/users" Match="NavLinkMatch.Prefix">Quản lý người dùng</MudNavLink>
+                <MudNavGroup Title="Quản lý" Icon="@Icons.Material.Filled.AdminPanelSettings" Expanded="false">
+                    <MudNavLink Href="/questions-v2" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.QuestionAnswer">
+                        Quản lý câu hỏi
+                    </MudNavLink>
+                    <MudNavLink Href="/questions/create-v2" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add">
+                        Tạo câu hỏi mới
+                    </MudNavLink>
+                    <MudNavLink Href="/report" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Assessment">
+                        Báo cáo kết quả
+                    </MudNavLink>
+                    <MudNavLink Href="/users" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.People">
+                        Quản lý người dùng
+                    </MudNavLink>                
+                </MudNavGroup>
             }
-            <MudNavLink Href="/user-infomation" Match="NavLinkMatch.Prefix">Thông tin cá nhân</MudNavLink>
-            <MudNavLink OnClick="@(()=> BeginLogOut())">Đăng xuất
+
+            <MudDivider Class="my-2" />
+            
+            <MudNavLink Href="/user-infomation" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
+                Thông tin cá nhân
+            </MudNavLink>
+            <MudNavLink OnClick="@BeginLogOut" Icon="@Icons.Material.Filled.Logout">
+                Đăng xuất
             </MudNavLink>
 
         </Authorized>
         <NotAuthorized>
-            <MudNavLink Href="/register" Match="NavLinkMatch.Prefix">Đăng ký</MudNavLink>
-            <MudNavLink Href="/login" Match="NavLinkMatch.Prefix">Đăng nhập</MudNavLink>
+            <MudNavLink Href="/register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.PersonAdd">
+                Đăng ký
+            </MudNavLink>
+            <MudNavLink Href="/login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Login">
+                Đăng nhập
+            </MudNavLink>
         </NotAuthorized>
     </AuthorizeView>
 </MudNavMenu>
@@ -43,11 +92,6 @@
 
     protected async Task BeginLogOut()
     {
-        await JsRuntime.InvokeVoidAsync("localStorage.removeItem", "token");
-        await JsRuntime.InvokeVoidAsync("localStorage.removeItem", "role");
-        await JsRuntime.InvokeVoidAsync("localStorage.removeItem", "id");
-        await JsRuntime.InvokeVoidAsync("localStorage.removeItem", "email");
-        ((CustomAuthenticationStateProvider)AuthenticationStateProvider).MarkUserAsLoggedOut();
-        Navigation.NavigateTo("/login");
+        await LogoutAsync();
     }
 }

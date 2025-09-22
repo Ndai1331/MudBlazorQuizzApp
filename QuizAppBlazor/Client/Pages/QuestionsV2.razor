@@ -1,0 +1,230 @@
+@page "/questions-v2"
+@using QuizAppBlazor.Client.DTOs
+@using QuizAppBlazor.Client.HttpResponse
+@inherits BaseBlazorPage
+
+<PageTitle>Quản lý câu hỏi</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudStack Spacing="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudText Typo="Typo.h4" Color="Color.Primary">
+                    <MudIcon Icon="Icons.Material.Filled.Quiz" Class="mr-2" />
+                    Quản lý câu hỏi
+                </MudText>
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="@NavigateToCreate">
+                    Tạo câu hỏi mới
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="searchText" 
+                                  Label="Tìm kiếm câu hỏi" 
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start" 
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  OnKeyUp="@OnSearchKeyUp"
+                                  Clearable="true" />
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudSelect @bind-Value="pageSize" 
+                               Label="Số lượng hiển thị" 
+                               Variant="Variant.Outlined">
+                        <MudSelectItem Value="10">10</MudSelectItem>
+                        <MudSelectItem Value="25">25</MudSelectItem>
+                        <MudSelectItem Value="50">50</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="@LoadQuestions"
+                               FullWidth="true">
+                        Làm mới
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <MudPaper Class="pa-4" Elevation="1">
+            @if (IsLoading)
+            {
+                <MudStack AlignItems="AlignItems.Center" Class="pa-8">
+                    <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+                    <MudText>Đang tải câu hỏi...</MudText>
+                </MudStack>
+            }
+            else if (questions?.Any() == true)
+            {
+                <MudTable Items="@questions" Hover="true" Breakpoint="Breakpoint.Sm">
+                    <HeaderContent>
+                        <MudTh>ID</MudTh>
+                        <MudTh>Câu hỏi</MudTh>
+                        <MudTh>Đáp án đúng</MudTh>
+                        <MudTh>Loại</MudTh>
+                        <MudTh>Thao tác</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="ID">@context.Id</MudTd>
+                        <MudTd DataLabel="Câu hỏi">
+                            <MudText Style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                @context.Question
+                            </MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Đáp án">
+                            <MudText Style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                @context.CorrectAnswer
+                            </MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Loại">
+                            @if (context.IsTextInput == true)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Tự luận" />
+                            }
+                            else
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Text="Trắc nghiệm" />
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Thao tác">
+                            <MudButtonGroup Variant="Variant.Text" Size="Size.Small">
+                                <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                               Color="Color.Info" 
+                                               OnClick="@(() => ViewQuestion(context))" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                               Color="Color.Primary" 
+                                               OnClick="@(() => EditQuestion(context))" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                               Color="Color.Error" 
+                                               OnClick="@(() => DeleteQuestion(context))" />
+                            </MudButtonGroup>
+                        </MudTd>
+                    </RowTemplate>
+                    <PagerContent>
+                        <MudTablePager />
+                    </PagerContent>
+                </MudTable>
+            }
+            else
+            {
+                <MudStack AlignItems="AlignItems.Center" Class="pa-8">
+                    <MudIcon Icon="@Icons.Material.Filled.QuestionMark" Size="Size.Large" Color="Color.Default" />
+                    <MudText Typo="Typo.h6" Color="Color.Default">Không có câu hỏi nào</MudText>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="@NavigateToCreate">
+                        Tạo câu hỏi đầu tiên
+                    </MudButton>
+                </MudStack>
+            }
+        </MudPaper>
+    </MudStack>
+</MudContainer>
+
+@code {
+    private IEnumerable<GetQuestionsDTO> questions = new List<GetQuestionsDTO>();
+    private string searchText = string.Empty;
+    private int pageSize = 10;
+    private int currentPage = 0;
+    private int totalRecords = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        
+        bool isLoggedIn = await IsAuthenticatedAsync();
+        if (!isLoggedIn)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        
+        Http = await AttachToken();
+        await LoadQuestions();
+    }
+
+    private async Task LoadQuestions()
+    {
+        IsLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var skip = currentPage * pageSize;
+            var result = await ApiService.GetQuestionsAsync(searchText, skip, pageSize);
+            
+            questions = result.Result ?? new List<GetQuestionsDTO>();
+            totalRecords = result.TotalRecords;
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync($"Lỗi tải danh sách câu hỏi: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        // Simple search without timer for now
+        InvokeAsync(async () => await LoadQuestions());
+    }
+
+    private void NavigateToCreate()
+    {
+        Navigation.NavigateTo("/questions/create-v2");
+    }
+
+    private void ViewQuestion(GetQuestionsDTO question)
+    {
+        // Simple navigation for now
+        Navigation.NavigateTo($"/questions/view/{question.Id}");
+    }
+
+    private void EditQuestion(GetQuestionsDTO question)
+    {
+        Navigation.NavigateTo($"/questions/edit/{question.Id}");
+    }
+
+    private async Task DeleteQuestion(GetQuestionsDTO question)
+    {
+        bool confirmed = await ConfirmAsync(
+            "Xác nhận xóa", 
+            $"Bạn có chắc chắn muốn xóa câu hỏi: \"{question.Question}\"?"
+        );
+
+        if (confirmed)
+        {
+            try
+            {
+                var result = await ApiService.DeleteQuestionAsync(question.Id);
+                
+                if (string.IsNullOrEmpty(result.Result))
+                {
+                    await ShowSuccessAsync("Xóa câu hỏi thành công");
+                    await LoadQuestions();
+                }
+                else
+                {
+                    await ShowErrorAsync($"Lỗi xóa câu hỏi: {result.Result}");
+                }
+            }
+            catch (Exception ex)
+            {
+                await ShowErrorAsync($"Lỗi kết nối: {ex.Message}");
+            }
+        }
+    }
+}
