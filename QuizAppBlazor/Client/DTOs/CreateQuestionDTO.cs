@@ -42,6 +42,7 @@ namespace QuizAppBlazor.Client.DTOs
 
         [Range(10, 300, ErrorMessage = "Thời gian phải từ 10 đến 300 giây")]
         public int TimeLimit { get; set; } = 60;
+        public QuestionTypeEnum Type { get; set; } = QuestionTypeEnum.QD;
 
         /// <summary>
         /// Validates that at least one alternative answer is provided for multiple choice questions

@@ -39,7 +39,8 @@ namespace QuizAppBlazor.API.Services
                         IsVideo = q.IsVideo,
                         IsYoutubeVideo = q.IsYoutubeVideo,
                         HasTimeLimit = q.HasTimeLimit,
-                        TimeLimit = q.TimeLimit
+                        TimeLimit = q.TimeLimit,
+                        Type = q.Type
                     });
 
                 int totalRecords = await query.CountAsync();
@@ -81,7 +82,8 @@ namespace QuizAppBlazor.API.Services
                         IsVideo = q.IsVideo,
                         IsYoutubeVideo = q.IsYoutubeVideo,
                         HasTimeLimit = q.HasTimeLimit,
-                        TimeLimit = q.TimeLimit
+                        TimeLimit = q.TimeLimit,
+                        Type = q.Type
                     })
                     .FirstOrDefaultAsync();
 
@@ -118,7 +120,8 @@ namespace QuizAppBlazor.API.Services
                         IsVideo = x.IsVideo,
                         IsYoutubeVideo = x.IsYoutubeVideo,
                         HasTimeLimit = x.HasTimeLimit,
-                        TimeLimit = x.TimeLimit
+                        TimeLimit = x.TimeLimit,
+                        Type = x.Type
                     })
                     .ToListAsync();
 
@@ -158,7 +161,8 @@ namespace QuizAppBlazor.API.Services
                     IsVideo = questionDto.IsVideo,
                     IsYoutubeVideo = questionDto.IsYoutubeVideo,
                     HasTimeLimit = questionDto.HasTimeLimit,
-                    TimeLimit = questionDto.TimeLimit
+                    TimeLimit = questionDto.TimeLimit,
+                    Type = questionDto.Type
                 };
 
                 _context.Questions.Add(questionModel);
@@ -205,7 +209,7 @@ namespace QuizAppBlazor.API.Services
                 questionModel.IsYoutubeVideo = questionDto.IsYoutubeVideo;
                 questionModel.HasTimeLimit = questionDto.HasTimeLimit;
                 questionModel.TimeLimit = questionDto.TimeLimit;
-
+                questionModel.Type = questionDto.Type;
                 _context.Questions.Update(questionModel);
                 await _context.SaveChangesAsync();
 

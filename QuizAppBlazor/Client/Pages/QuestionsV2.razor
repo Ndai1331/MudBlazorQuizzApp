@@ -1,6 +1,8 @@
 @page "/questions-v2"
 @using QuizAppBlazor.Client.DTOs
 @using QuizAppBlazor.Client.HttpResponse
+@using System.Threading
+@using MudBlazor
 @inherits BaseBlazorPage
 
 <PageTitle>Quản lý câu hỏi</PageTitle>
@@ -25,28 +27,22 @@
         <MudPaper Class="pa-4" Elevation="1">
             <MudGrid>
                 <MudItem xs="12" md="6">
-                    <MudTextField @bind-Value="searchText" 
+                    <MudTextField T="string"
+                                  Value="@searchString"
+                                  ValueChanged="@OnSearch"
                                   Label="Tìm kiếm câu hỏi" 
                                   Variant="Variant.Outlined"
                                   Adornment="Adornment.Start" 
                                   AdornmentIcon="@Icons.Material.Filled.Search"
-                                  OnKeyUp="@OnSearchKeyUp"
+                                  Placeholder="Tìm kiếm theo ID, câu hỏi, đáp án..."
                                   Clearable="true" />
                 </MudItem>
-                <MudItem xs="12" md="3">
-                    <MudSelect @bind-Value="pageSize" 
-                               Label="Số lượng hiển thị" 
-                               Variant="Variant.Outlined">
-                        <MudSelectItem Value="10">10</MudSelectItem>
-                        <MudSelectItem Value="25">25</MudSelectItem>
-                        <MudSelectItem Value="50">50</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12" md="3">
-                    <MudButton Variant="Variant.Outlined" 
+                <MudItem xs="12" md="6">
+                    <MudButton Class="mt-3"
+                               Variant="Variant.Outlined" 
                                Color="Color.Primary" 
                                StartIcon="@Icons.Material.Filled.Refresh"
-                               OnClick="@LoadQuestions"
+                               OnClick="@(() => table.ReloadServerData())"
                                FullWidth="true">
                         Làm mới
                     </MudButton>
@@ -55,16 +51,11 @@
         </MudPaper>
 
         <MudPaper Class="pa-4" Elevation="1">
-            @if (IsLoading)
-            {
-                <MudStack AlignItems="AlignItems.Center" Class="pa-8">
-                    <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-                    <MudText>Đang tải câu hỏi...</MudText>
-                </MudStack>
-            }
-            else if (questions?.Any() == true)
-            {
-                <MudTable Items="@questions" Hover="true" Breakpoint="Breakpoint.Sm">
+            <MudTable ServerData="ServerReload" 
+                      Dense="true" 
+                      Hover="true" 
+                      Breakpoint="Breakpoint.Sm"
+                      @ref="table">
                     <HeaderContent>
                         <MudTh>ID</MudTh>
                         <MudTh>Câu hỏi</MudTh>
@@ -75,23 +66,23 @@
                     <RowTemplate>
                         <MudTd DataLabel="ID">@context.Id</MudTd>
                         <MudTd DataLabel="Câu hỏi">
-                            <MudText Style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            <MudText >
                                 @context.Question
                             </MudText>
                         </MudTd>
                         <MudTd DataLabel="Đáp án">
-                            <MudText Style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            <MudText Style="max-width: 200px;">
                                 @context.CorrectAnswer
                             </MudText>
                         </MudTd>
                         <MudTd DataLabel="Loại">
-                            @if (context.IsTextInput == true)
+                            @if (context.Type == QuestionTypeEnum.QD)
                             {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Tự luận" />
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Quy định" />
                             }
                             else
                             {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Text="Trắc nghiệm" />
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Text="Bảo mật" />
                             }
                         </MudTd>
                         <MudTd DataLabel="Thao tác">
@@ -111,32 +102,35 @@
                     <PagerContent>
                         <MudTablePager />
                     </PagerContent>
-                </MudTable>
-            }
-            else
-            {
-                <MudStack AlignItems="AlignItems.Center" Class="pa-8">
-                    <MudIcon Icon="@Icons.Material.Filled.QuestionMark" Size="Size.Large" Color="Color.Default" />
-                    <MudText Typo="Typo.h6" Color="Color.Default">Không có câu hỏi nào</MudText>
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Primary" 
-                               StartIcon="@Icons.Material.Filled.Add"
-                               OnClick="@NavigateToCreate">
-                        Tạo câu hỏi đầu tiên
-                    </MudButton>
-                </MudStack>
-            }
+                <NoRecordsContent>
+                    <MudStack AlignItems="AlignItems.Center" Class="pa-8">
+                        <MudIcon Icon="@Icons.Material.Filled.QuestionMark" Size="Size.Large" Color="Color.Default" />
+                        <MudText Typo="Typo.h6" Color="Color.Default">Không có câu hỏi nào</MudText>
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Primary" 
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   OnClick="@NavigateToCreate">
+                            Tạo câu hỏi đầu tiên
+                        </MudButton>
+                    </MudStack>
+                </NoRecordsContent>
+                
+                <LoadingContent>
+                    <MudStack AlignItems="AlignItems.Center" Class="pa-8">
+                        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+                        <MudText>Đang tải câu hỏi...</MudText>
+                    </MudStack>
+                </LoadingContent>
+            </MudTable>
         </MudPaper>
     </MudStack>
 </MudContainer>
 
 @code {
-    private IEnumerable<GetQuestionsDTO> questions = new List<GetQuestionsDTO>();
-    private string searchText = string.Empty;
-    private int pageSize = 10;
-    private int currentPage = 0;
-    private int totalRecords = 0;
-
+    private IEnumerable<GetQuestionsDTO> pagedData = new List<GetQuestionsDTO>();
+    private MudTable<GetQuestionsDTO> table = default!;
+    private int totalItems;
+    private string searchString = string.Empty;
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
@@ -148,38 +142,44 @@
             return;
         }
         
+        await table.ReloadServerData();
         Http = await AttachToken();
-        await LoadQuestions();
     }
 
-    private async Task LoadQuestions()
+    /// <summary>
+    /// Server-side data loading with pagination, sorting, and filtering
+    /// </summary>
+    private async Task<TableData<GetQuestionsDTO>> ServerReload(TableState state, CancellationToken token)
     {
-        IsLoading = true;
-        StateHasChanged();
-
         try
         {
-            var skip = currentPage * pageSize;
-            var result = await ApiService.GetQuestionsAsync(searchText, skip, pageSize);
+            // Get all questions from API with current search string
+            var result = await ApiService.GetQuestionsAsync(searchString, state.Page * state.PageSize, state.PageSize);
+            pagedData = result.Result ?? new List<GetQuestionsDTO>();
+            // Set total items for pagination
+            totalItems = result.TotalRecords;
             
-            questions = result.Result ?? new List<GetQuestionsDTO>();
-            totalRecords = result.TotalRecords;
+            return new TableData<GetQuestionsDTO>() 
+            { 
+                TotalItems = totalItems, 
+                Items = pagedData 
+            };
         }
         catch (Exception ex)
         {
-            await ShowErrorAsync($"Lỗi tải danh sách câu hỏi: {ex.Message}");
-        }
-        finally
-        {
-            IsLoading = false;
-            StateHasChanged();
+            await ShowErrorAsync($"Lỗi tải dữ liệu: {ex.Message}");
+            return new TableData<GetQuestionsDTO>() 
+            { 
+                TotalItems = 0, 
+                Items = new List<GetQuestionsDTO>() 
+            };
         }
     }
 
-    private void OnSearchKeyUp(KeyboardEventArgs e)
+    private void OnSearch(string text)
     {
-        // Simple search without timer for now
-        InvokeAsync(async () => await LoadQuestions());
+        searchString = text;
+        table.ReloadServerData();
     }
 
     private void NavigateToCreate()
@@ -214,7 +214,7 @@
                 if (string.IsNullOrEmpty(result.Result))
                 {
                     await ShowSuccessAsync("Xóa câu hỏi thành công");
-                    await LoadQuestions();
+                    await table.ReloadServerData();
                 }
                 else
                 {

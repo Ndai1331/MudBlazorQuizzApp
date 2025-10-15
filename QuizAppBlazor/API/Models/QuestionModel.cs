@@ -48,5 +48,8 @@ namespace QuizAppBlazor.API.Models
         [AllowNull]
         public int? TimeLimit { get; set; } = 60;
 
+
+        public QuestionTypeEnum Type { get; set; } = QuestionTypeEnum.QD;
+
     }
 }

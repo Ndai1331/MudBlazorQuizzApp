@@ -57,11 +57,13 @@ builder.Services.AddDbContextPool<ApplicationDbContext>(options =>
 
 // Add caching
 builder.Services.AddMemoryCache();
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    var redisConnection = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
-    options.Configuration = ExpandConfigValue(redisConnection);
-});
+
+// Redis cache disabled due to connection timeout issues
+// builder.Services.AddStackExchangeRedisCache(options =>
+// {
+//     var redisConnection = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+//     options.Configuration = ExpandConfigValue(redisConnection);
+// });
 
 // Register services
 builder.Services.AddScoped<QuizAppBlazor.API.Services.QuestionService>();
@@ -69,15 +71,15 @@ builder.Services.AddScoped<QuizAppBlazor.API.Services.IScoreService, QuizAppBlaz
 builder.Services.AddScoped<QuizAppBlazor.API.Services.IAuditLogService, QuizAppBlazor.API.Services.AuditLogService>();
 builder.Services.AddScoped<QuizAppBlazor.API.Services.SeedDataService>();
 
-// Register cached service as decorator
+// Register cached service as decorator - only memory cache
 builder.Services.AddScoped<QuizAppBlazor.API.Services.IQuestionService>(serviceProvider =>
 {
     var baseService = serviceProvider.GetRequiredService<QuizAppBlazor.API.Services.QuestionService>();
     var memoryCache = serviceProvider.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
-    var distributedCache = serviceProvider.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>();
     var logger = serviceProvider.GetRequiredService<ILogger<QuizAppBlazor.API.Services.CachedQuestionService>>();
     
-    return new QuizAppBlazor.API.Services.CachedQuestionService(baseService, memoryCache, distributedCache, logger);
+    // Pass null for distributed cache since we disabled Redis
+    return new QuizAppBlazor.API.Services.CachedQuestionService(baseService, memoryCache, null, logger);
 });
 
 builder

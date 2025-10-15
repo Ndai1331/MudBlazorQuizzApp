@@ -70,6 +70,7 @@ namespace QuizAppBlazor.Client.DTOs
         public DateTime? UpdatedAt { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
+        public QuestionTypeEnum Type { get; set; } = QuestionTypeEnum.QD;
         
         // Navigation properties
         public List<QuestionOptionDTO> Options { get; set; } = new List<QuestionOptionDTO>();

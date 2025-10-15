@@ -66,6 +66,19 @@ namespace QuizAppBlazor.API.Services
         {
             try
             {
+                // Check for recent duplicate score (within last 5 minutes)
+                var recentScore = await _context.Score
+                    .Where(s => s.UserId == userId && 
+                               s.CorrectAnswers == userScore.CorrectAnswers &&
+                               s.Date > DateTime.UtcNow.AddMinutes(-5))
+                    .FirstOrDefaultAsync();
+
+                if (recentScore != null)
+                {
+                    _logger.LogWarning("Duplicate score attempt detected for user: {UserId}", userId);
+                    return new ResponseBaseHttp<string> { Result = "Score already saved recently" };
+                }
+
                 var scoreModel = new ScoreModel
                 {
                     UserId = userId,

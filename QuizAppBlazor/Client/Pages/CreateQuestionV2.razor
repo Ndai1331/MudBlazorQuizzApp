@@ -28,33 +28,36 @@
                                       For="@(() => model.Question)"
                                       HelperText="Nhập nội dung câu hỏi (10-500 ký tự)" />
                     </MudItem>
-
+@* 
                     <MudItem xs="12" sm="6">
                         <MudSwitch @bind-Value="model.IsTextInput" 
                                    Label="Câu hỏi tự luận" 
                                    Color="Color.Primary" />
-                    </MudItem>
+                    </MudItem> *@
 
-                    <MudItem xs="12" sm="6">
-                        <MudSwitch @bind-Value="model.HasTimeLimit" 
+                     <MudItem xs="12" sm="6">
+                        @* <MudSwitch @bind-Value="model.HasTimeLimit" 
                                    Label="Có giới hạn thời gian" 
-                                   Color="Color.Primary" />
+                                   Color="Color.Primary" /> *@
+                        <MudSelect @bind-Value="model.Type" 
+                               Label="Loại câu hỏi" 
+                               Variant="Variant.Outlined">
+                            <MudSelectItem Value="QuestionTypeEnum.QD">Quy định</MudSelectItem>
+                            <MudSelectItem Value="QuestionTypeEnum.BM">Bảo mật</MudSelectItem>
+                        </MudSelect>
+                    </MudItem> 
+
+                   <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="model.TimeLimit" 
+                                            Label="Thời gian (giây)" 
+                                            Variant="Variant.Outlined"
+                                            Min="10" 
+                                            Max="300"
+                                            For="@(() => model.TimeLimit)"
+                                            HelperText="10-300 giây" />
                     </MudItem>
 
-                    @if (model.HasTimeLimit)
-                    {
-                        <MudItem xs="12" sm="6">
-                            <MudNumericField @bind-Value="model.TimeLimit" 
-                                             Label="Thời gian (giây)" 
-                                             Variant="Variant.Outlined"
-                                             Min="10" 
-                                             Max="300"
-                                             For="@(() => model.TimeLimit)"
-                                             HelperText="10-300 giây" />
-                        </MudItem>
-                    }
-
-                    <MudItem xs="12">
+                    <MudItem xs="12"  sm="6">
                         <MudTextField @bind-Value="model.CorrectAnswer" 
                                       Label="Đáp án đúng" 
                                       Variant="Variant.Outlined"
@@ -62,39 +65,32 @@
                                       For="@(() => model.CorrectAnswer)"
                                       HelperText="Nhập đáp án đúng (1-200 ký tự)" />
                     </MudItem>
+                  
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="model.Alternativ2" 
+                                        Label="Lựa chọn 2" 
+                                        Variant="Variant.Outlined"
+                                        MaxLength="200"
+                                        For="@(() => model.Alternativ2)" />
+                    </MudItem>
 
-                    @if (!model.IsTextInput)
-                    {
-                        <MudItem xs="12">
-                            <MudText Typo="Typo.subtitle2" Class="mb-2">Các lựa chọn khác (ít nhất 1 lựa chọn)</MudText>
-                        </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="model.Alternativ3" 
+                                        Label="Lựa chọn 3" 
+                                        Variant="Variant.Outlined"
+                                        MaxLength="200"
+                                        For="@(() => model.Alternativ3)" />
+                    </MudItem>
 
-                        <MudItem xs="12" sm="6">
-                            <MudTextField @bind-Value="model.Alternativ2" 
-                                          Label="Lựa chọn 2" 
-                                          Variant="Variant.Outlined"
-                                          MaxLength="200"
-                                          For="@(() => model.Alternativ2)" />
-                        </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="model.Alternativ4" 
+                                        Label="Lựa chọn 4" 
+                                        Variant="Variant.Outlined"
+                                        MaxLength="200"
+                                        For="@(() => model.Alternativ4)" />
+                    </MudItem>
 
-                        <MudItem xs="12" sm="6">
-                            <MudTextField @bind-Value="model.Alternativ3" 
-                                          Label="Lựa chọn 3" 
-                                          Variant="Variant.Outlined"
-                                          MaxLength="200"
-                                          For="@(() => model.Alternativ3)" />
-                        </MudItem>
-
-                        <MudItem xs="12" sm="6">
-                            <MudTextField @bind-Value="model.Alternativ4" 
-                                          Label="Lựa chọn 4" 
-                                          Variant="Variant.Outlined"
-                                          MaxLength="200"
-                                          For="@(() => model.Alternativ4)" />
-                        </MudItem>
-                    }
-
-                    <MudItem xs="12">
+                    @* <MudItem xs="12">
                         <MudExpansionPanels>
                             <MudExpansionPanel Text="Media (Tùy chọn)">
                                 <MudTextField @bind-Value="model.ImageVideo" 
@@ -123,7 +119,7 @@
                                 </MudGrid>
                             </MudExpansionPanel>
                         </MudExpansionPanels>
-                    </MudItem>
+                    </MudItem> *@
                 </MudGrid>
 
                 <ValidationSummary />

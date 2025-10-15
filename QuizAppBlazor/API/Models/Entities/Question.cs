@@ -36,6 +36,9 @@ namespace QuizAppBlazor.API.Models.Entities
 
         public bool IsActive { get; set; } = true;
 
+        public QuestionTypeEnum? Type { get; set; } = QuestionTypeEnum.QD;
+
+
         // Navigation properties
         public virtual ICollection<QuestionOption> Options { get; set; } = new List<QuestionOption>();
         public virtual ICollection<QuestionMedia> Media { get; set; } = new List<QuestionMedia>();

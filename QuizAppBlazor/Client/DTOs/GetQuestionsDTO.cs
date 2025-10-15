@@ -36,5 +36,7 @@ namespace QuizAppBlazor.Client.DTOs
         public bool? HasTimeLimit { get; set; }
 
         public int? TimeLimit { get; set; } =60;
+        public QuestionTypeEnum Type { get; set; } = QuestionTypeEnum.QD;
+
     }
 }

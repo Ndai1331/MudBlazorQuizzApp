@@ -28,8 +28,17 @@
                     if (!isRunning)
                     {
                         <div style="text-align: center;">
-                            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Tertiary" OnClick="Done">HOÀN THÀNH
-                                BÀI THI!
+                            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Tertiary" 
+                                OnClick="Done" Disabled="@isSavingScore">
+                                @if (isSavingScore)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                    <span class="ml-2">Đang lưu điểm...</span>
+                                }
+                                else
+                                {
+                                    <span>HOÀN THÀNH BÀI THI!</span>
+                                }
                             </MudButton>
                         </div>
 
@@ -97,6 +106,7 @@
     protected string Time { get; set; } = "00:00";   //Time UI variable and format
     public bool isTimeOut = false;
     int selectedIndex = -1;
+    private bool isSavingScore = false; // Prevent multiple score saves
 
     //Starts the time
     public void StartTime(int secondsToRun)
@@ -262,10 +272,37 @@
 
     private async Task QuizFinished()
     {
-        UserScore.CorrectAnswers = correctAnswers;
-        var jsonPayLoad = JsonSerializer.Serialize(UserScore);
-        var content = new StringContent(jsonPayLoad, Encoding.UTF8, "application/json");
-        var response = await Http.PostAsync("api/Quizz/Score/post", content);
+        if (isSavingScore) return; // Prevent multiple calls
+        
+        isSavingScore = true;
+        StateHasChanged();
+        
+        try
+        {
+            UserScore.CorrectAnswers = correctAnswers;
+            var jsonPayLoad = JsonSerializer.Serialize(UserScore);
+            var content = new StringContent(jsonPayLoad, Encoding.UTF8, "application/json");
+            var response = await Http.PostAsync("api/Quizz/Score/post", content);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                await ShowSuccessAsync("Điểm số đã được lưu thành công!");
+            }
+            else
+            {
+                var errorMessage = await response.Content.ReadAsStringAsync();
+                await ShowErrorAsync($"Lỗi lưu điểm: {errorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync($"Lỗi khi lưu điểm: {ex.Message}");
+        }
+        finally
+        {
+            isSavingScore = false;
+            StateHasChanged();
+        }
     }
     private void Done()
     {

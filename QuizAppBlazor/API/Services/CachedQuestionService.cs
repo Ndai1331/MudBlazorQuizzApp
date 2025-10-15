@@ -55,25 +55,28 @@ namespace QuizAppBlazor.API.Services
                 return cachedQuestion;
             }
 
-            // Try distributed cache
-            try
+            // Try distributed cache (skip if disabled)
+            if (_distributedCache != null)
             {
-                var distributedCachedData = await _distributedCache.GetStringAsync(cacheKey);
-                if (!string.IsNullOrEmpty(distributedCachedData))
+                try
                 {
-                    var cachedResult = JsonSerializer.Deserialize<ResponseBaseHttp<GetQuestionsDTO>>(distributedCachedData);
-                    if (cachedResult != null)
+                    var distributedCachedData = await _distributedCache.GetStringAsync(cacheKey);
+                    if (!string.IsNullOrEmpty(distributedCachedData))
                     {
-                        // Store in memory cache for faster access
-                        _memoryCache.Set(cacheKey, cachedResult, _defaultCacheOptions);
-                        _logger.LogDebug("Question {Id} found in distributed cache", id);
-                        return cachedResult;
+                        var cachedResult = JsonSerializer.Deserialize<ResponseBaseHttp<GetQuestionsDTO>>(distributedCachedData);
+                        if (cachedResult != null)
+                        {
+                            // Store in memory cache for faster access
+                            _memoryCache.Set(cacheKey, cachedResult, _defaultCacheOptions);
+                            _logger.LogDebug("Question {Id} found in distributed cache", id);
+                            return cachedResult;
+                        }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to retrieve question {Id} from distributed cache", id);
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to retrieve question {Id} from distributed cache", id);
+                }
             }
 
             // Get from database
@@ -81,18 +84,22 @@ namespace QuizAppBlazor.API.Services
             
             if (result?.Result != null)
             {
-                // Cache the result
+                // Cache the result in memory
                 _memoryCache.Set(cacheKey, result, _defaultCacheOptions);
                 
-                try
+                // Cache in distributed cache only if available
+                if (_distributedCache != null)
                 {
-                    var serializedData = JsonSerializer.Serialize(result);
-                    await _distributedCache.SetStringAsync(cacheKey, serializedData, _distributedCacheOptions);
-                    _logger.LogDebug("Question {Id} cached successfully", id);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to cache question {Id} in distributed cache", id);
+                    try
+                    {
+                        var serializedData = JsonSerializer.Serialize(result);
+                        await _distributedCache.SetStringAsync(cacheKey, serializedData, _distributedCacheOptions);
+                        _logger.LogDebug("Question {Id} cached successfully", id);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to cache question {Id} in distributed cache", id);
+                    }
                 }
             }
 
@@ -154,13 +161,16 @@ namespace QuizAppBlazor.API.Services
                 var cacheKey = $"question_{id}";
                 _memoryCache.Remove(cacheKey);
                 
-                try
+                if (_distributedCache != null)
                 {
-                    await _distributedCache.RemoveAsync(cacheKey);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to remove question {Id} from distributed cache", id);
+                    try
+                    {
+                        await _distributedCache.RemoveAsync(cacheKey);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to remove question {Id} from distributed cache", id);
+                    }
                 }
                 
                 // Clear random questions cache
@@ -181,13 +191,16 @@ namespace QuizAppBlazor.API.Services
                 var cacheKey = $"question_{id}";
                 _memoryCache.Remove(cacheKey);
                 
-                try
+                if (_distributedCache != null)
                 {
-                    await _distributedCache.RemoveAsync(cacheKey);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to remove question {Id} from distributed cache", id);
+                    try
+                    {
+                        await _distributedCache.RemoveAsync(cacheKey);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to remove question {Id} from distributed cache", id);
+                    }
                 }
                 
                 // Clear random questions cache
@@ -207,13 +220,16 @@ namespace QuizAppBlazor.API.Services
             {
                 _memoryCache.Remove(key);
                 
-                try
+                if (_distributedCache != null)
                 {
-                    await _distributedCache.RemoveAsync(key);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to remove {CacheKey} from distributed cache", key);
+                    try
+                    {
+                        await _distributedCache.RemoveAsync(key);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to remove {CacheKey} from distributed cache", key);
+                    }
                 }
             }
         }
